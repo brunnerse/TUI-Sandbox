@@ -5,10 +5,10 @@
 class TUI_App {
 
 public:
-	TUI_App() : 
-		cfg_use_alt_screen(true), 
-		cfg_disable_echo(false),
-		cfg_disable_canonical(true)
+	TUI_App(bool use_alt_screen, bool disable_echo, bool disable_canonical) : 
+		cfg_use_alt_screen(use_alt_screen), 
+		cfg_disable_echo(disable_echo),
+		cfg_disable_canonical(disable_canonical)
 	{}
 //	~TUI_App();
 
@@ -16,12 +16,6 @@ public:
 
 
 protected:
-	// CFG-Settings
-	const bool cfg_use_alt_screen;
-	const bool cfg_disable_echo;
-	const bool cfg_disable_canonical;
-
-
 	uint16_t terminal_rows = 0;
 	uint16_t terminal_columns = 0;
 
@@ -29,9 +23,13 @@ protected:
 	volatile bool running = false;
 
 private:
+	// CFG-Settings for terminal init
+	const bool cfg_use_alt_screen;
+	const bool cfg_disable_echo;
+	const bool cfg_disable_canonical;
 
-	virtual int init_terminal();
-	virtual int uninit_terminal();
+	int init_terminal();
+	int uninit_terminal();
 
 	virtual int init_graphics()=0;
 	virtual int run()=0;

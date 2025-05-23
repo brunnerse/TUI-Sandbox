@@ -38,8 +38,11 @@ enum class Color {
 
 void tc_mode_set(Mode mode);
 void tc_mode_reset(Mode mode);
-void tc_mode_reset_all();
+void tc_mode_reset();
 
+void tc_mode_set(Mode mode, Color fg_color, bool fg_bright=false);
+void tc_mode_set(Mode mode, Color fg_color, Color bg_color);
+void tc_mode_set(Mode mode, Color fg_color, bool fg_bright, Color bg_color, bool bg_bright=false);
 
 
 void tc_color_set(Color color, bool bright=false);

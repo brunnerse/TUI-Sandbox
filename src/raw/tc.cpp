@@ -20,8 +20,33 @@ void tc_mode_reset(Mode mode) {
     printf(ESC_MODE, ESC_MODE_RESET_OFFSET + (unsigned)mode);
 }
 
-void tc_mode_reset_all() {
+void tc_mode_reset() {
     tc_mode_set(Mode::NONE);
+}
+
+
+void tc_mode_set(Mode mode, Color fg_color, bool fg_bright) {
+    printf(ESC_MODE_COLOR, 
+        (unsigned)mode,
+        (fg_bright ? ESC_MODE_COLOR_FG_BRIGHT_OFFSET : ESC_MODE_COLOR_FG_OFFSET)
+        + (unsigned)fg_color);
+}
+
+void tc_mode_set(Mode mode, Color fg_color, Color bg_color) {
+    printf(ESC_MODE_COLOR_FG_BG, 
+        (unsigned)mode,
+        ESC_MODE_COLOR_FG_OFFSET + (unsigned)fg_color,
+        ESC_MODE_COLOR_BG_OFFSET + (unsigned)bg_color);
+
+}
+
+void tc_mode_set(Mode mode, Color fg_color, bool fg_bright, Color bg_color, bool bg_bright) {
+    printf(ESC_MODE_COLOR_FG_BG, 
+        (unsigned)mode,
+        (fg_bright ? ESC_MODE_COLOR_FG_BRIGHT_OFFSET : ESC_MODE_COLOR_FG_OFFSET)
+        + (unsigned)fg_color,
+        (bg_bright ? ESC_MODE_COLOR_BG_BRIGHT_OFFSET : ESC_MODE_COLOR_BG_OFFSET)
+        + (unsigned)bg_color);
 }
 
 

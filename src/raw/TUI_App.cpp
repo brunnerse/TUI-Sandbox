@@ -18,7 +18,6 @@ void TUI_App::handler_window_size_changed(int i)
 {
 	uint16_t cols, rows;
 	terminal_cfg_get_size(&rows, &cols);
-	printf("Winsize changed to %u, %u\n", rows, cols);
 	if (TUI_App::initialized_instance != nullptr) {
 		TUI_App::initialized_instance->app_handler_window_size_changed(rows, cols);
 	}

@@ -55,6 +55,8 @@
 #define ESC_MODE_RESET_OFFSET 21
 
 #define ESC_MODE ESC"[%um"
+#define ESC_MODE_COLOR ESC"[%u;%um"
+#define ESC_MODE_COLOR_FG_BG ESC"[%u;%u;%um"
 
 #define ESC_COLOR_FG_256 ESC"[38;5;%um" // %u being the color ID
 #define ESC_COLOR_BG_256 ESC"[48;5;%um" // %u being the color ID
