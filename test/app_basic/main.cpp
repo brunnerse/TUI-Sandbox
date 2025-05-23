@@ -1,4 +1,5 @@
-#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 
 #include "app_basic.h"
 
@@ -7,11 +8,15 @@
 int main(int argc, char *argv[])
 {
 
-    Basic_App tui_app;
+    Basic_App app;
 
-    tui_app.init();
+    int ret = app.start();
 
-    tui_app.run();
+    assert(0 == ret);
+
+    printf("App ended.\n");
+
+
 
     return 1;
 }
