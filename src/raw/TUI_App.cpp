@@ -16,27 +16,44 @@ void TUI_App::handler_exit(int i)
 
 void TUI_App::handler_window_size_changed(int i) 
 {
+	uint16_t cols, rows;
+	terminal_cfg_get_size(&rows, &cols);
+	printf("Winsize changed to %u, %u\n", rows, cols);
 	if (TUI_App::initialized_instance != nullptr) {
-		TUI_App::initialized_instance->app_handler_window_size_changed();
+		TUI_App::initialized_instance->app_handler_window_size_changed(rows, cols);
 	}
 }
 
 
 void TUI_App::app_handler_exit()
 {
-	if (this->initialized) {
-		this->uninit();
-	}
+	if (this->running)
+		this->running = false;
 }
 
-void TUI_App::app_handler_window_size_changed()
+void TUI_App::app_handler_window_size_changed(uint16_t new_rows, uint16_t new_columns)
 {
-
+	this->terminal_rows = new_rows;
+	this->terminal_columns = new_columns;
 }
 
 
+int TUI_App::start() 
+{
+	this->init_terminal();
+	this->init_graphics();
 
-int TUI_App::init()
+	this->running = true;
+
+	while(this->running && 0 == this->run())
+		;
+
+	this->uninit_terminal();
+
+	return 0;
+}
+
+int TUI_App::init_terminal()
 {
 	if (TUI_App::initialized_instance != nullptr) {
 		fprintf(stderr, "Only one instance can be active at the same time!");
@@ -46,24 +63,31 @@ int TUI_App::init()
 
 	// Setup terminal config 
 	terminal_cfg_store();
-	terminal_cfg_set(false, false);
-	tc_alt_screen_enter();
+	terminal_cfg_set(!this->cfg_disable_echo, !this->cfg_disable_canonical);
 
-	// Setup sigint handler
+	// Do not buffer stdout
+	setbuf(stdout, NULL);
+
+	if (this->cfg_use_alt_screen)
+		tc_alt_screen_enter();
+
+	// Read terminal size
+	terminal_cfg_get_size(&this->terminal_rows, &this->terminal_columns);
+
+	// Setup signal handlers
 	signal(SIGINT, handler_exit); 
 	signal(SIGWINCH, handler_window_size_changed); 
-
-	tc_cursor_set_pos(0, 0);
 
 	this->initialized = true;
 	return 0;
 }
 
 
-
-int TUI_App::uninit()
+int TUI_App::uninit_terminal()
 {
-	tc_alt_screen_exit();
+	if (this->cfg_use_alt_screen)
+		tc_alt_screen_exit();
+
 	terminal_cfg_restore();	
 
 	this->initialized = false;
