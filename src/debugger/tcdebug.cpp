@@ -12,6 +12,8 @@
 
 #include <string>
 
+#include "terminal_cfg.h"
+
 volatile bool sig_int_received = false;
 volatile bool sig_child_received = false;
 
@@ -36,7 +38,7 @@ int main(int argc, char **argv)
         printf(
             "Usage: %s [-o file.txt] [-o </dev/pts/XX>] <program> [<args for program>]\n"
             "\t-o output file (default: <program>.txt)\n" 
-            "\t-o output to other terminal <dev/pts/XX>; use output of tty command in other terminal\n" 
+            "\t-o output to other terminal </dev/pts/XX>; use output of tty command in other terminal\n" 
         ,argv[0]);
 
         return 0;
@@ -76,39 +78,54 @@ int main(int argc, char **argv)
     signal(SIGINT, sigint_handler);
     signal(SIGCHLD, sigchld_handler);
 
-    int pipefd_parent2child[2];
-    int pipefd_child2parent[2];
 
-    assert(0 == pipe(pipefd_parent2child));
-    assert(0 == pipe(pipefd_child2parent));
+    terminal_cfg_store();
+    terminal_cfg_set(false, false, true);
 
-    // TODO execute program in new process, forward stdio
+
+    int pipe_fd_child_stdout[2];
+    int pipe_fd_child_stdin[2];
+
+    assert(0 == pipe2(pipe_fd_child_stdout, O_NONBLOCK));
+    assert(0 == pipe2(pipe_fd_child_stdin, O_NONBLOCK));
+
     pid_t child_pid = fork();
 
-    if (child_pid == 0) {
-        puts("Child entering.\n");
-
+    if (child_pid == 0)
+    {
         // Inside child process
-        // Close read direction for child2parent, and write direction for parent2child
-        close(pipefd_child2parent[0]);
-        close(pipefd_parent2child[1]);
-
-        printf("=============\n");
-        printf("Executing '%s",argv[arg_idx]);
+        printf("[Child] =============\n");
+        printf("[Child] Executing '%s",argv[arg_idx]);
         for (int idx = arg_idx+1; idx < argc; idx++)
             printf(" %s", argv[idx]);
         printf("'\n");
-        printf("=============\n");
+        printf("[Child] =============\n");
 
-        dup2(pipefd_child2parent[1], 1); // Duplicate child2parent to stdout
-        dup2(pipefd_parent2child[0], 0); // Duplicate parent2child to stdin
+        // Child stdout: Close pipe read direction, dup pipe write direction to stdout
+        close(pipe_fd_child_stdout[0]);
+        dup2(pipe_fd_child_stdout[1], 1);
+
+        // Child stdout: Close pipe write direction, dup pipe read direction to stdout
+        close(pipe_fd_child_stdin[1]);
+        dup2(pipe_fd_child_stdin[0], 0);
+    
+/*
+        printf("[Child] Checkpoint\n");
+
+        while (1) {
+            int i = getchar();
+            if (i != EOF) {
+                printf("[Child] Got '%c'\n", (char)i);
+            }
+        }
+*/
 
         execv(argv[arg_idx], (char* const*)(argv + arg_idx)); //TODO currently requires full path, e.g. /usr/bin/echo instead of echo
         // This should never be reached, unless execv failed
         printf("execv exited with error code %d\n", errno);
 
-        close(pipefd_child2parent[1]);
-        close(pipefd_parent2child[0]);
+        close(pipe_fd_child_stdout[1]);
+        close(pipe_fd_child_stdin[0]);
         return -1; 
     }
 
@@ -121,64 +138,41 @@ int main(int argc, char **argv)
 
     printf("Child has PID %lu\n", (unsigned long)child_pid);
 
+    // Read child stdout: Close pipe write direction, use pipe read direction
+    close(pipe_fd_child_stdout[1]);
+    int fd_child_stdout = pipe_fd_child_stdout[0];
 
-    // Close read direction for parent2child, and write direction for child2parent
-    close(pipefd_child2parent[1]);
-    close(pipefd_parent2child[0]);
+    // Write child stdin: Close pipe read direction, use pipe write direction
+    close(pipe_fd_child_stdin[0]);
+    int fd_child_stdin = pipe_fd_child_stdin[1];
 
-    int fd_from_child = pipefd_child2parent[0];
-    int fd_to_child = pipefd_parent2child[1];
-
-
-    // Todo can I use terminal_cfg() functions here??
-
-    // Prepare stdin: Set non-canonical, non-blocking 
-    fcntl(0, F_SETFL, O_NONBLOCK);
-
-    // TODO do  I need to do this for fd 1 aswell / instead?
-
-    struct termios term_settings; 
-    tcgetattr(0, &term_settings); /* grab old terminal i/o settings */
-
-    struct termios old_term_settings = term_settings; 
-    term_settings.c_lflag &= (unsigned)~ICANON; /* disable buffered i/o */
-    term_settings.c_lflag &= (unsigned)~ECHO; /* disable echo mode */
-    term_settings.c_cc[VMIN] = 1;
-
-    tcsetattr(0, TCSANOW, &term_settings); /* use these new terminal i/o settings now */
+    // fprintf(stderr, "[Parent] Checkpoint\n");
 
     while (!sig_child_received)
     {
+        int i = getchar();
+        if (i != EOF) {
+            // fprintf(stderr, "[Parent] getchar '%c', writing to child\n", (char)i);
+            char c = (char)i;
+            write(fd_child_stdin, &c, 1);
+        }
+
         char c;
-        if (0 < read(fd_from_child, &c, 1)) {
-            // Write character to file
-            // TODO Handle escape sequences, and special characters like \r, \f
-            //fprintf(outfile, "[%c]", c);
+        if (0 < read(fd_child_stdout, &c, 1)) {
+            // fprintf(stderr, "[Parent] From child: '%c', writing to file\n", c);
             putc(c, outfile);
-
-            // Forward character to terminal stdout
-            //printf("%c|", c);
+            printf(".%c", c);
             //putc(c, stdout);
-            write(1, &c, 1);
         }
-
-
-        // TODO might not be necessary
-        if (0 < read(0, &c, 1)){
-            printf("Read from 0!");
-            write(fd_to_child, &c, 1);
-        }
-        //sleep(1);
-        //c = 'A';
-        //write(fd_to_child, &c, 1);
     }
 
 //    kill(child_pid, SIGINT)
+
     printf("=============\n");
     printf("Process ended.\n");
     printf("=============\n");
 
-    tcsetattr(0, TCSANOW, &old_term_settings); /* restore old terminal i/o settings now */
+    terminal_cfg_restore();
     fclose(outfile); 
     return 0;
 }

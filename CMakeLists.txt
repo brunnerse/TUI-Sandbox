@@ -11,7 +11,7 @@ if (RUN_LINTER)
     )
 endif()
 
-project("Pong-TUI" C CXX)
+project("TUI-Sandbox" C CXX)
 
 
 add_compile_options(
