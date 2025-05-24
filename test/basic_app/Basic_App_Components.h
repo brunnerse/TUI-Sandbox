@@ -184,6 +184,52 @@ public:
 
 };
 
+
+class CommandLine_Component : public TUI_Component {
+private:
+    std::string line;
+    uint16_t output_width = 0;
+
+public:
+
+    bool push_char(char c) {
+        line.push_back(c);
+        return update();
+    }
+
+    void pop_char() {
+        line.pop_back();
+        output_width -= 1;
+        tc_cursor_set_pos(bounds.row, bounds.col + output_width);
+        tc_erase_after_cursor(true);
+    }
+
+    std::string clear() {
+        std::string cpy = line;
+        line.clear();
+        output_width = 0;
+
+        repaint();
+
+        return cpy;
+    } 
+
+    bool repaint() {
+        tc_cursor_set_pos(bounds.row, bounds.col);
+        tc_erase_after_cursor(true);
+
+        printf("%s", line.c_str());
+        output_width = (uint16_t)line.size();
+        return true; 
+    }
+
+    bool update() {
+        tc_cursor_set_pos(bounds.row, bounds.col + output_width);
+        output_width += (uint16_t)printf("%s", &line.c_str()[output_width]);
+        return true;
+    }
+};
+
 class Exit_Component : public TUI_Component {
 public:
 

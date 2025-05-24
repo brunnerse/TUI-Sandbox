@@ -30,6 +30,7 @@ int Basic_App::repaint_all() {
     *TUI_App::get_bounds(comp_status.get())     = rectangle_t(terminal_rows-1, 1, 1, terminal_columns);
     *TUI_App::get_bounds(comp_win_size.get())   = rectangle_t(1, terminal_columns-19, 1, 20);
     *TUI_App::get_bounds(comp_time.get())       =  rectangle_t(terminal_rows-5, terminal_columns-24, 3, 25);
+    *TUI_App::get_bounds(comp_cmdline.get())    =  rectangle_t(terminal_rows, 1, 1, terminal_columns);
     *TUI_App::get_bounds(comp_text.get())       =  rectangle_t(terminal_rows/2-1, terminal_columns/2-10, 3, 20);
 
     // Empty screen and repaint all
@@ -37,6 +38,7 @@ int Basic_App::repaint_all() {
     this->comp_win_size->repaint();
     this->comp_status->repaint();
     this->comp_time->repaint();
+    this->comp_cmdline->repaint();
     this->comp_text->repaint();
 
     return 0;
@@ -49,6 +51,7 @@ int Basic_App::init_graphics() {
     this->comp_status = std::make_unique<Status_Component>();
     this->comp_win_size = std::make_unique<WindowSize_Component>(terminal_rows, terminal_columns);
     this->comp_time = std::make_unique<Time_Component>(start_time_s);
+    this->comp_cmdline = std::make_unique<CommandLine_Component>();
     this->comp_text = std::make_unique<TextBox_Component>("Basic App");
 
     this->comp_text->set_cfg(Mode::BLINKING, Color::GREEN, true, Color::BLACK, false);
@@ -68,58 +71,34 @@ int Basic_App::init_graphics() {
 
 int Basic_App::run() {
 
-    static std::string command;
-
     if (update_time())  {
         this->comp_time->update(current_time_ms, current_time_epoch_s);
+        this->comp_cmdline->update();
     }
-
-    tc_cursor_set_pos(2, 0);
-    printf("B");
-    tc_cursor_set_pos(3, 1);
-    printf("C");
-    tc_cursor_set_pos(4, 2);
-    printf("D");
-    tc_cursor_set_pos(5, terminal_columns-1);
-    printf("X");
-    tc_cursor_set_pos(2, terminal_columns-2);
-    printf("Y");
-    tc_cursor_set_pos(3, terminal_columns);
-    printf("Z");
-    tc_cursor_set_pos(4, terminal_columns+1);
-    printf("A");
-
-    return 0;
 
     int c = getchar();
 
     if (c != EOF) {
-        //print_character(c);
-        tc_cursor_set_pos(terminal_rows, (uint16_t)command.size());
-
         if (c == '\n') {
+            std::string command = comp_cmdline->clear();
+
             if (process_command(command.c_str())) {
                 status_set((std::string("Processed command: ") + command).c_str());
             } else {
                 status_set((std::string("Unknown command: ") + command).c_str());
             }
             clear_status_time_ms = current_time_ms + 2000;
-
-            command.clear();
-            tc_erase_line();
         } else if (c == '\x7f') { // DEL
-            command.pop_back();
-            tc_cursor_move_column(-1);
-            tc_erase_after_cursor(true);
+            comp_cmdline->pop_char();
         } else  {
-            command.push_back((char)c);
-            putchar(c);
+            comp_cmdline->push_char((char)c);
         }
-        tc_cursor_set_pos(terminal_rows, (uint16_t)command.size());
     }
 
-    if (current_time_ms >= clear_status_time_ms) // && current_time - clear_status_time < __LONG_MAX__/2) // Catch overflow
-        status_clear();
+    if (current_time_ms >= clear_status_time_ms) {// && current_time - clear_status_time < __LONG_MAX__/2) // Catch overflow
+        status_set("");
+        clear_status_time_ms = __LONG_MAX__;
+    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 

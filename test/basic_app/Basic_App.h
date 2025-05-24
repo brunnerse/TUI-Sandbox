@@ -44,5 +44,6 @@ private:
     std::unique_ptr<WindowSize_Component> comp_win_size = nullptr;
     std::unique_ptr<Time_Component> comp_time = nullptr;
     std::unique_ptr<TextBox_Component> comp_text = nullptr;
+    std::unique_ptr<CommandLine_Component> comp_cmdline = nullptr;
 };
 
