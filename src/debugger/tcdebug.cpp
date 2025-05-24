@@ -76,9 +76,11 @@ int main(int argc, char **argv)
         out_filename.append(".txt");
     }
 
+    printf("--------------------\n");
     printf("Output to file '%s'\n", out_filename.c_str());
     if (!out_filename_2.empty())
-    printf("\tAnd to file '%s'\n", out_filename_2.c_str());
+    printf("   And to file '%s'\n", out_filename_2.c_str());
+    printf("--------------------\n");
 
 
     signal(SIGINT, sigint_handler);
@@ -138,9 +140,12 @@ int main(int argc, char **argv)
         }
 */
 
-        execv(argv[arg_idx], (char* const*)(argv + arg_idx)); //TODO currently requires full path, e.g. /usr/bin/echo instead of echo
+        // TODO stdout loss on program exit: when program quits, somehow wait until pipe output has been fully processed
+        // TODO set 
+
+        execvp(argv[arg_idx], (char* const*)(argv + arg_idx)); //TODO currently requires full path, e.g. /usr/bin/echo instead of echo
         // This should never be reached, unless execv failed
-        printf("execv exited with error code %d\n", errno);
+        fprintf(stderr, "[Error] execv exited with error code %d\n", errno);
 
         close(pipe_fd_child_stdout[1]);
         close(pipe_fd_child_stdin[0]);
@@ -178,18 +183,21 @@ int main(int argc, char **argv)
         char c;
         if (0 < read(fd_child_stdout, &c, 1)) {
             // fprintf(stderr, "[Parent] From child: '%c', writing to file\n", c);
+            putc(c, stdout);
+            
+            // TODO instead of simply copying it to file, analyse it 
+
             putc(c, out_file);
             if (out_file_2 != nullptr)
                 putc(c, out_file_2);
-            putc(c, stdout);
         }
     }
 
 //    kill(child_pid, SIGINT)
 
-    printf("=============\n");
-    printf("Process ended.\n");
-    printf("=============\n");
+    printf("==================\n");
+    printf("Child process finished.\n");
+    printf("==================\n");
 
     terminal_cfg_restore();
 

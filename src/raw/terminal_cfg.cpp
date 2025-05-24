@@ -1,10 +1,15 @@
 #include "terminal_cfg.h"
 
 #include <termios.h>
-#include <sys/ioctl.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 #include <assert.h>
+#include <stdio.h>
+
+#include <string>
+
 
 static termios stored_terminal_cfg;
 static bool is_stored_terminal_cfg_valid = false;
@@ -60,7 +65,13 @@ void terminal_cfg_set(bool echo, bool canonical, bool input_nonblocking)
 int terminal_cfg_get_size(uint16_t *rows, uint16_t *cols) 
 {
 	struct winsize size;
-	assert(-1 != ioctl(1, TIOCGWINSZ, &size));
+	int ret = ioctl(1, TIOCGWINSZ, &size);
+
+	if (ret == -1) {
+        fprintf(stderr, "[Error] ioctl exited with error code %d\n", errno);
+		assert(-1 != ioctl(1, TIOCGWINSZ, &size));
+	}
+
 	*rows = size.ws_row;
 	*cols = size.ws_col;
 
