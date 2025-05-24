@@ -4,46 +4,59 @@
 #include <assert.h>
 #include <stdarg.h>
 
-int print_repeated(const char *str, int num_repetitions) {
+int print_repeated(const char *str, unsigned num_repetitions) {
     int ret;
     for (unsigned i = 0; i < num_repetitions; i++)
         ret += printf("%s", str);
     return ret;
 }
 
+int print_zeros(unsigned num_zeros) {
+    assert(num_zeros > 0);
+    return printf("%0*u", num_zeros, 0);
+}
+
+int print_spaces(unsigned num_spaces) {
+    return printf("%*s", num_spaces, "");
+}
+
 int printf_aligned(unsigned width, Align alignment, const char* fmt, ...) {
-    int length;
     va_list arg;
     va_start(arg, fmt);
 
     char str[200];
-    length = vsnprintf(str, 200, fmt, arg);
+    int ret = vsnprintf(str, 200, fmt, arg);
+    if (ret < 0)
+        return ret;
     va_end(arg);
 
+    unsigned length = (unsigned)ret;
     // Cut off string if too long
     if (length > width) {
         width = length;
         str[width] = '\0';
     }
 
-    uint16_t n_before, n_after;
+    int n_before, n_after;
 
     if (alignment == Align::LEFT) {
         n_before = 0;
-        n_after = width - length;
+        n_after = (int)(width - length);
     } else if (alignment == Align::CENTER) {
-        n_before = (width - length) / 2;  // Round down
-        n_after = (width - length + 1) / 2; // Round up
+        n_before = (int)(width - length) / 2;  // Round down
+        n_after = (int)(width - length + 1) / 2; // Round up
     } else if (alignment == Align::RIGHT) {
-        n_before = width - length;
+        n_before = (int)(width - length);
         n_after = 0; 
     } else 
             assert(0);
+
+    assert(n_before >= 0 && n_after >= 0);
 //    fprintf(stderr, "n_before: %u, n_after: %u\n", n_before, n_after);
 
     printf("%*s%s%*s", n_before, "", str, n_after, "");
 
-    return length;
+    return (int)length;
 }
 
 /*

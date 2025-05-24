@@ -18,35 +18,52 @@
 #include "print_helper.h"
 
 
-#define TIME_UPDATE_INTERVAL_MS 500
+// Constants
+#define TIME_UPDATE_INTERVAL_MS 100
 
-class Text_Component : public TUI_Component {
+#define STATUS_MAX_LEN 200
+#define TEXT_MAX_LEN 200
+
+
+
+class TextBox_Component : public TUI_Component {
 
 private:
+    char text[TEXT_MAX_LEN];
+
+    Mode mode = Mode::NONE;
+    Color fg_color = Color::DEFAULT, bg_color = Color::DEFAULT;
+    bool fg_bright = false, bg_bright = false;
 
 public:
-    Text_Component() 
-    {}
+    TextBox_Component() {text[0] = '\0';}
+    TextBox_Component(const char *text) { strncpy(this->text, text, TEXT_MAX_LEN); }
 
-    bool update() {
+    void set_cfg(Mode mode, Color fg_color, bool fg_bright=false, Color bg_color=Color::DEFAULT, bool bg_bright=false) {
+        this->mode = mode;
+        this->fg_color = fg_color;
+        this->fg_bright = fg_bright;
+        this->bg_color = bg_color;
+        this->bg_bright = bg_bright;
+    }
 
+    bool update(const char* text) {
+        strncpy(this->text, text, TEXT_MAX_LEN);
         return this->repaint();
     }
 
+
     bool repaint() {
-
-        // TODO move in new component as well
-        tc_cursor_set_pos(this->bounds.row, this->bounds.col); 
-        tc_mode_set(Mode::BLINKING, Color::GREEN, true, Color::BLACK);
-        tc_cursor_save_pos();
-        printf("%20s", "");
-        tc_cursor_restore_pos();
-        tc_cursor_move_row(1);
-        printf("%20s", "Basic App      ");
-        tc_cursor_restore_pos();
-        tc_cursor_move_row(2);
-        printf("%20s", "");
-
+        tc_mode_set(mode, fg_color, fg_bright, bg_color, bg_bright);
+        for (uint16_t row = bounds.row; row < bounds.row + bounds.height; row++) {
+            tc_cursor_set_pos(row, bounds.col); 
+            if ((row - bounds.row) == bounds.height/2) {
+                printf_aligned(bounds.width, Align::CENTER, "%s", text);
+            } else {
+                print_spaces(bounds.width);
+            }
+        }
+        tc_mode_reset();
 
         return true;
     }
@@ -77,9 +94,9 @@ public:
         tc_mode_set(Mode::ITALIC, Color::RED, true, Color::BLACK, true);
 
         tc_cursor_set_pos(bounds.row, bounds.col);
-        printf_aligned(bounds.width, Align::RIGHT, "[ms] %10lu", current_time_ms - start_time_s * 1000);
+        printf_aligned(bounds.width, Align::RIGHT, "[ms] %13lu", current_time_ms - start_time_s * 1000);
         tc_cursor_set_pos(bounds.row + 1, bounds.col);
-        printf_aligned(bounds.width, Align::RIGHT, "[Epoch] %10lu", current_time_s);
+        printf_aligned(bounds.width, Align::RIGHT, "[Epoch] %13lu", current_time_s);
         tc_cursor_set_pos(bounds.row + 2, bounds.col);
         std::string datestr(asctime(localtime(&current_time_s)));
         datestr.pop_back(); // Remove trailing \n
@@ -91,8 +108,6 @@ public:
     }
 };
 
-// TODO better way of grouping that?
-#define STATUS_MAX_LEN 200
 
 class Status_Component : public TUI_Component {
 private:

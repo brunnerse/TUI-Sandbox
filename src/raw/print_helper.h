@@ -10,6 +10,8 @@ enum class Align {
 	RIGHT
 };
 
+int print_spaces(unsigned num_spaces);
+int print_zeros(unsigned num_zeros);
 
 int print_repeated(const char *str, int num_repetitions);
 

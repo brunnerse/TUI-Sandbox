@@ -7,6 +7,8 @@
 
 #include <memory>
 
+
+
 class Basic_App : public TUI_App {
 
 public:
@@ -25,6 +27,7 @@ private:
 
     const time_t start_time_s;
     time_t current_time_ms;
+    time_t current_time_epoch_s;
 
     time_t clear_status_time_ms = __LONG_MAX__;
 
@@ -40,5 +43,6 @@ private:
     std::unique_ptr<Status_Component> comp_status = nullptr;
     std::unique_ptr<WindowSize_Component> comp_win_size = nullptr;
     std::unique_ptr<Time_Component> comp_time = nullptr;
+    std::unique_ptr<TextBox_Component> comp_text = nullptr;
 };
 

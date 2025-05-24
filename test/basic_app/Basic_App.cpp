@@ -27,15 +27,17 @@ int Basic_App::repaint_all() {
     this->comp_win_size->update_winsize_values(terminal_rows, terminal_columns);
 
     // Update component bounds
-    *TUI_App::get_bounds(comp_status.get())   = rectangle_t(terminal_rows-1, 1, 1, terminal_columns);
-    *TUI_App::get_bounds(comp_win_size.get()) = rectangle_t(1, terminal_columns-19, 1, 20);
-    *TUI_App::get_bounds(comp_time.get()) =  rectangle_t(terminal_rows-5, terminal_columns-29, 3, 30);
+    *TUI_App::get_bounds(comp_status.get())     = rectangle_t(terminal_rows-1, 1, 1, terminal_columns);
+    *TUI_App::get_bounds(comp_win_size.get())   = rectangle_t(1, terminal_columns-19, 1, 20);
+    *TUI_App::get_bounds(comp_time.get())       =  rectangle_t(terminal_rows-5, terminal_columns-24, 3, 25);
+    *TUI_App::get_bounds(comp_text.get())       =  rectangle_t(terminal_rows/2-1, terminal_columns/2-10, 3, 20);
 
     // Empty screen and repaint all
     tc_erase_all();
     this->comp_win_size->repaint();
     this->comp_status->repaint();
     this->comp_time->repaint();
+    this->comp_text->repaint();
 
     return 0;
 }
@@ -47,6 +49,9 @@ int Basic_App::init_graphics() {
     this->comp_status = std::make_unique<Status_Component>();
     this->comp_win_size = std::make_unique<WindowSize_Component>(terminal_rows, terminal_columns);
     this->comp_time = std::make_unique<Time_Component>(start_time_s);
+    this->comp_text = std::make_unique<TextBox_Component>("Basic App");
+
+    this->comp_text->set_cfg(Mode::BLINKING, Color::GREEN, true, Color::BLACK, false);
 
 
     this->repaint_all();
@@ -66,7 +71,7 @@ int Basic_App::run() {
     static std::string command;
 
     if (update_time())  {
-        tc_cursor_set_pos(terminal_rows, (uint16_t)command.size());
+        this->comp_time->update(current_time_ms, current_time_epoch_s);
     }
 
     tc_cursor_set_pos(2, 0);
@@ -160,6 +165,7 @@ void Basic_App::status_set(const char* status) {
 bool Basic_App::update_time() {
     static time_t last_update_time_ms = 0;
 
+    this->current_time_epoch_s = time(NULL);
     this->current_time_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
