@@ -42,14 +42,14 @@ void terminal_cfg_set(bool echo, bool canonical, bool input_nonblocking)
 	if (echo) {
 		terminal_cfg.c_lflag |= ECHO;
 	} else {
-	    terminal_cfg.c_lflag &= ~ECHO; 
+	    terminal_cfg.c_lflag &= (unsigned)~ECHO; 
 	}
 
 	// En-/Disable buffered I/O
 	if (canonical) {
 		terminal_cfg.c_lflag |= ICANON;
 	} else {
-	    terminal_cfg.c_lflag &= ~ICANON; 
+	    terminal_cfg.c_lflag &= (unsigned)~ICANON; 
 		terminal_cfg.c_cc[VMIN] = 1;
 		terminal_cfg.c_cc[VTIME] = 0;
 	}
@@ -66,5 +66,4 @@ int terminal_cfg_get_size(uint16_t *rows, uint16_t *cols)
 
 	return 0;
 }
-
 

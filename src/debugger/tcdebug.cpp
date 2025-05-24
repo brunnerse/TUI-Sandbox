@@ -16,10 +16,12 @@ volatile bool sig_int_received = false;
 volatile bool sig_child_received = false;
 
 void sigint_handler(int arg) {
+    (void)arg;
     sig_int_received = true;
 }
 
 void sigchld_handler(int arg) {
+    (void)arg;
     sig_child_received = true;
 }
 
@@ -127,14 +129,22 @@ int main(int argc, char **argv)
     int fd_from_child = pipefd_child2parent[0];
     int fd_to_child = pipefd_parent2child[1];
 
+
+    // Todo can I use terminal_cfg() functions here??
+
     // Prepare stdin: Set non-canonical, non-blocking 
     fcntl(0, F_SETFL, O_NONBLOCK);
+
+    // TODO do  I need to do this for fd 1 aswell / instead?
+
     struct termios term_settings; 
     tcgetattr(0, &term_settings); /* grab old terminal i/o settings */
+
     struct termios old_term_settings = term_settings; 
-    term_settings.c_lflag &= ~ICANON; /* disable buffered i/o */
-    term_settings.c_lflag &= ~ECHO; /* disable echo mode */
+    term_settings.c_lflag &= (unsigned)~ICANON; /* disable buffered i/o */
+    term_settings.c_lflag &= (unsigned)~ECHO; /* disable echo mode */
     term_settings.c_cc[VMIN] = 1;
+
     tcsetattr(0, TCSANOW, &term_settings); /* use these new terminal i/o settings now */
 
     while (!sig_child_received)

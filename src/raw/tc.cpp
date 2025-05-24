@@ -103,19 +103,19 @@ void tc_cursor_set_column(uint16_t col) {
 void tc_cursor_move_column(int16_t col) {
     printf(((col < 0) ? ESC_CURSOR_MOVE_LEFT : ESC_CURSOR_MOVE_RIGHT),
         abs(col));
-    cursor_pos.col += col;
+    cursor_pos.col = (uint16_t)(cursor_pos.col + col);
 }
 
 void tc_cursor_move_row(int16_t row) {
     printf(((row < 0) ? ESC_CURSOR_MOVE_UP : ESC_CURSOR_MOVE_DOWN),
         abs(row));
-    cursor_pos.row += row;
+    cursor_pos.row = (uint16_t)(cursor_pos.row + row);
 }
 
 void tc_cursor_move_row_begin(int16_t row) {
     printf(((row < 0) ? ESC_CURSOR_MOVE_UP_TO_LINE_BEGIN : ESC_CURSOR_MOVE_DOWN_TO_LINE_BEGIN),
         abs(row));
-    cursor_pos.row += row;
+    cursor_pos.row = (uint16_t)(cursor_pos.row + row);
     cursor_pos.col = 0;
 }
 
