@@ -54,6 +54,7 @@ void tc_color_set_rgb(uint8_t r, uint8_t g, uint8_t b, bool bg=true);
 
 
 
+cursor_pos_t tc_cursor_get_last_set_pos();
 
 void tc_cursor_save_pos();
 void tc_cursor_restore_pos();
@@ -72,6 +73,9 @@ void tc_cursor_move_row_begin(int16_t row);
 
 void tc_erase_all();
 void tc_erase_line();
+void tc_erase_before_cursor(bool line_only=false);
+void tc_erase_after_cursor(bool line_only=false);
+
 
 void tc_cursor_set_invisible();
 void tc_cursor_reset_invisible();

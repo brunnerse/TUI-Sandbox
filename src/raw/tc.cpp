@@ -8,8 +8,7 @@
 
 
 
-static cursor_pos_t cursor_position = {0, 0};  
-// TODO Update cursor position in all functions
+static cursor_pos_t cursor_pos = {0, 0};  
 
 
 void tc_mode_set(Mode mode) {
@@ -77,6 +76,11 @@ void tc_color_set_rgb(uint8_t r, uint8_t g, uint8_t b, bool bg) {
 }
 
 
+
+cursor_pos_t tc_cursor_get_last_set_pos() {
+    return cursor_pos;
+}
+
 void tc_cursor_save_pos() {
     printf(ESC_CURSOR_SAVE_POS);
 }
@@ -87,28 +91,33 @@ void tc_cursor_restore_pos() {
 
 void tc_cursor_set_pos(uint16_t row, uint16_t col) {
     printf(ESC_CURSOR_SET_POS, row, col);
+    cursor_pos = {row, col};
 }
 
 
 void tc_cursor_set_column(uint16_t col) {
     printf(ESC_CURSOR_SET_COLUMN, col);
+    cursor_pos.col = col;
 }
 
 void tc_cursor_move_column(int16_t col) {
     printf(((col < 0) ? ESC_CURSOR_MOVE_LEFT : ESC_CURSOR_MOVE_RIGHT),
         abs(col));
+    cursor_pos.col += col;
 }
 
 void tc_cursor_move_row(int16_t row) {
     printf(((row < 0) ? ESC_CURSOR_MOVE_UP : ESC_CURSOR_MOVE_DOWN),
         abs(row));
+    cursor_pos.row += row;
 }
 
 void tc_cursor_move_row_begin(int16_t row) {
     printf(((row < 0) ? ESC_CURSOR_MOVE_UP_TO_LINE_BEGIN : ESC_CURSOR_MOVE_DOWN_TO_LINE_BEGIN),
         abs(row));
+    cursor_pos.row += row;
+    cursor_pos.col = 0;
 }
-
 
 
 void tc_erase_all() {
@@ -117,6 +126,14 @@ void tc_erase_all() {
 
 void tc_erase_line() {
     printf(ESC_ERASE_ENTIRE_LINE);
+}
+
+void tc_erase_before_cursor(bool line_only) {
+    printf(line_only ? ESC_ERASE_FROM_CURSOR_TO_LINE_BEGIN : ESC_ERASE_FROM_CURSOR_TO_SCREEN_BEGIN);
+}
+
+void tc_erase_after_cursor(bool line_only) {
+    printf(line_only ? ESC_ERASE_FROM_CURSOR_TO_LINE_END : ESC_ERASE_FROM_CURSOR_TO_SCREEN_END);
 }
 
 void tc_cursor_set_invisible(){

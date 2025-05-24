@@ -2,6 +2,7 @@
 
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <fcntl.h>
 
 #include <assert.h>
 
@@ -28,8 +29,12 @@ int terminal_cfg_restore()
 }
 
 
-void terminal_cfg_set(bool echo, bool canonical)
+void terminal_cfg_set(bool echo, bool canonical, bool input_nonblocking)
 {
+	int file_status_flags = fcntl(0, F_GETFL);
+	fcntl(0, F_SETFL, input_nonblocking ? (file_status_flags | O_NONBLOCK) : (file_status_flags & ~O_NONBLOCK));
+
+	//TODO do it need setattr for 1 or 0 ? Are they the same ???
 
 	termios terminal_cfg = stored_terminal_cfg;
 

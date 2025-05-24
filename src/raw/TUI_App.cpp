@@ -62,7 +62,7 @@ int TUI_App::init_terminal()
 
 	// Setup terminal config 
 	terminal_cfg_store();
-	terminal_cfg_set(!this->cfg_disable_echo, !this->cfg_disable_canonical);
+	terminal_cfg_set(!this->cfg_disable_echo, !this->cfg_disable_canonical, this->cfg_set_input_nonblocking);
 
 	// Do not buffer stdout
 	setbuf(stdout, NULL);

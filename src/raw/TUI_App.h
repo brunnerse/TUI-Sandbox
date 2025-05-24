@@ -5,10 +5,11 @@
 class TUI_App {
 
 public:
-	TUI_App(bool use_alt_screen, bool disable_echo, bool disable_canonical) : 
+	TUI_App(bool use_alt_screen, bool disable_echo, bool disable_canonical, bool set_input_nonblocking) : 
 		cfg_use_alt_screen(use_alt_screen), 
 		cfg_disable_echo(disable_echo),
-		cfg_disable_canonical(disable_canonical)
+		cfg_disable_canonical(disable_canonical),
+		cfg_set_input_nonblocking(set_input_nonblocking)
 	{}
 //	~TUI_App();
 
@@ -27,6 +28,7 @@ private:
 	const bool cfg_use_alt_screen;
 	const bool cfg_disable_echo;
 	const bool cfg_disable_canonical;
+	const bool cfg_set_input_nonblocking;
 
 	int init_terminal();
 	int uninit_terminal();
