@@ -44,10 +44,9 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    // TODO handle multiple filenames
-
-    // Iterate through flags
-    std::string out_filename("");
+    // Iterate through flags; copy up to two filenames
+    std::string out_filename;
+    std::string out_filename_2;
 
     int arg_idx = 1;
     while (arg_idx < argc && argv[arg_idx][0] == '-') {
@@ -55,7 +54,11 @@ int main(int argc, char **argv)
         case 'o':
             arg_idx++;
             assert(arg_idx < argc);
-            out_filename = argv[arg_idx];
+
+            if (out_filename.empty())
+                out_filename = argv[arg_idx];
+            else 
+                out_filename_2 = argv[arg_idx];
             break;
         default:
             fprintf(stderr, "Ignoring invalid command option '%s'\n", argv[arg_idx]);
@@ -66,13 +69,16 @@ int main(int argc, char **argv)
     // Assuming that <program> is at arg_idx now
     assert(arg_idx < argc);
 
-    if (out_filename.size() == 0) {
+    // If no filename given, assign default filename 
+    if (out_filename.empty()) {
         out_filename = argv[arg_idx]; 
         out_filename = out_filename.substr(out_filename.find_last_of('/')+1);
         out_filename.append(".txt");
     }
 
-    printf("Output to file %s\n", out_filename.c_str());
+    printf("Output to file '%s'\n", out_filename.c_str());
+    if (!out_filename_2.empty())
+    printf("\tAnd to file '%s'\n", out_filename_2.c_str());
 
 
     signal(SIGINT, sigint_handler);
@@ -82,7 +88,19 @@ int main(int argc, char **argv)
     terminal_cfg_store();
     terminal_cfg_set(false, false, true);
 
+    FILE *out_file = nullptr, *out_file_2 = nullptr;
+    out_file   = fopen(out_filename.c_str(), "a"); //TODO open in which mode?
+    if (!out_filename_2.empty())
+        out_file_2 = fopen(out_filename_2.c_str(), "a"); //TODO open in which mode?
 
+    // Disable output buffer for /dev/xx files
+    if (out_filename.find_first_of("/dev/") == 0)
+        setbuf(out_file, NULL); 
+    if (out_filename_2.find_first_of("/dev/") == 0)
+        setbuf(out_file_2, NULL); 
+
+
+    // Create pipes from and to child process
     int pipe_fd_child_stdout[2];
     int pipe_fd_child_stdin[2];
 
@@ -134,7 +152,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    FILE* outfile = fopen(out_filename.c_str(), "a"); //TODO open in which mode?
 
     printf("Child has PID %lu\n", (unsigned long)child_pid);
 
@@ -148,6 +165,7 @@ int main(int argc, char **argv)
 
     // fprintf(stderr, "[Parent] Checkpoint\n");
 
+
     while (!sig_child_received)
     {
         int i = getchar();
@@ -160,9 +178,10 @@ int main(int argc, char **argv)
         char c;
         if (0 < read(fd_child_stdout, &c, 1)) {
             // fprintf(stderr, "[Parent] From child: '%c', writing to file\n", c);
-            putc(c, outfile);
-            printf(".%c", c);
-            //putc(c, stdout);
+            putc(c, out_file);
+            if (out_file_2 != nullptr)
+                putc(c, out_file_2);
+            putc(c, stdout);
         }
     }
 
@@ -173,6 +192,10 @@ int main(int argc, char **argv)
     printf("=============\n");
 
     terminal_cfg_restore();
-    fclose(outfile); 
+
+    fclose(out_file); 
+    if (out_file_2 != nullptr)
+        fclose(out_file_2); 
+
     return 0;
 }
