@@ -197,11 +197,14 @@ public:
         return update();
     }
 
-    void pop_char() {
+    bool pop_char() {
+        if (line.size() < 1)
+            return false;
         line.pop_back();
         output_width -= 1;
         tc_cursor_set_pos(bounds.row, bounds.col + output_width);
         tc_erase_after_cursor(true);
+        return true;
     }
 
     std::string clear() {

@@ -79,6 +79,9 @@ int Basic_App::run() {
     int c = getchar();
 
     if (c != EOF) {
+
+        print_character((char)c);
+
         if (c == '\n') {
             std::string command = comp_cmdline->clear();
 
@@ -108,7 +111,6 @@ int Basic_App::run() {
 
 bool Basic_App::process_command(const char* cmd) {
     if (strcmp(cmd, "exit") == 0) {
-        // TODO Ask for exit on separate screen
         this->show_exit_screen();
         return true;
     } else if (strcmp(cmd, "test") == 0) {
@@ -118,8 +120,9 @@ bool Basic_App::process_command(const char* cmd) {
 }
 
 
+// TODO move in extra component
 bool Basic_App::print_character(char c) {
-    static uint16_t row = 1;
+    static uint16_t row = 1; //TODO reset row regularly
 //    tc_cursor_save_pos();
     tc_cursor_set_pos(row, 0);
     row += 1;
@@ -127,7 +130,7 @@ bool Basic_App::print_character(char c) {
     tc_color_set(Color::CYAN);
     printf("~");
     tc_color_set(Color::WHITE);
-    printf("\t%3u\t\\x%x",  (unsigned)c, (unsigned)c);
+    printf("%5u\t\\x%x",  (unsigned)c, (unsigned)c);
     tc_color_set(Color::YELLOW);
     printf("\t'%c'", ('0' <= c && c <= 'z') ? c : '?');
 //    tc_cursor_restore_pos();
