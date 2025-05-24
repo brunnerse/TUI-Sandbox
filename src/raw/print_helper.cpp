@@ -54,9 +54,7 @@ int printf_aligned(unsigned width, Align alignment, const char* fmt, ...) {
     assert(n_before >= 0 && n_after >= 0);
 //    fprintf(stderr, "n_before: %u, n_after: %u\n", n_before, n_after);
 
-    printf("%*s%s%*s", n_before, "", str, n_after, "");
-
-    return (int)length;
+    return printf("%*s%s%*s", n_before, "", str, n_after, "");
 }
 
 /*

@@ -23,6 +23,7 @@
 
 #define STATUS_MAX_LEN 200
 #define TEXT_MAX_LEN 200
+#define EXIT_OPTION_MAX_LEN 15
 
 
 
@@ -157,6 +158,7 @@ class WindowSize_Component : public TUI_Component {
 private:
     uint16_t width;
     uint16_t terminal_width, terminal_height;
+
 public:
     WindowSize_Component(uint16_t term_width, uint16_t term_height) 
     : terminal_width(term_width), terminal_height(term_height)
@@ -233,24 +235,93 @@ public:
     }
 };
 
+template <unsigned NUM_OPT=2>
 class Exit_Component : public TUI_Component {
-public:
 
-   bool repaint() {
-        tc_cursor_set_pos(bounds.row, bounds.col);
-        tc_mode_set(Mode::BOLD, Color::BLACK, false, Color::WHITE, true);
-        tc_cursor_save_pos();
-        printf("%20s", "");
-        tc_cursor_restore_pos();
-        tc_cursor_move_row(1);
-        tc_cursor_set_invisible();
-        printf("%15s%5s", "Exit App?", "");
-        tc_cursor_restore_pos();
-        tc_cursor_move_row(2);
-        printf("%20s", "");
+private:
+    int selected_option = -1;
+
+    char options[NUM_OPT][EXIT_OPTION_MAX_LEN];
+
+
+public:
+    Exit_Component() {
+        for (unsigned i = 0; i < NUM_OPT; i++) {
+            snprintf(options[i], EXIT_OPTION_MAX_LEN, "%u", i);
+        }
+    }
+
+    int get_option() {
+        return selected_option;
+    }
+
+    void set_option_text(unsigned option, const char* text) {
+        assert(option < NUM_OPT);
+        strncpy(options[option], text, EXIT_OPTION_MAX_LEN);
+    }
+
+    void set_option(int opt) {
+        assert(0 <= opt && opt < (int)NUM_OPT);
+        selected_option = opt;
+        repaint_options();
+    }
+
+    bool repaint() {
+        assert(bounds.height >= 4);
+        tc_mode_set(Mode::NONE, Color::WHITE, true, Color::BLACK);
+
+        for (uint16_t row = bounds.row; row < bounds.row + bounds.height; row++) 
+        {
+            tc_cursor_set_pos(row, bounds.col); 
+            if (row == bounds.row || row == bounds.row + bounds.height - 1) {
+                printf("+");
+                print_repeated("-", bounds.width-2);
+                printf("+");
+                continue;
+            }
+            printf("|");
+
+            if ((row == bounds.row + bounds.height - 2)) 
+            {
+                // Keep this row clear for options
+                tc_cursor_move_column((int16_t)(bounds.width-2));
+            } else
+            {
+                if ((row - bounds.row) == (bounds.height-1)/2) {
+                    printf_aligned(bounds.width-2, Align::CENTER, "%s", "Exit App?");
+                } else {
+                    print_spaces(bounds.width-2);
+                }
+            }
+            printf("|");
+        }
+
+
+        repaint_options();
 
         tc_mode_reset();
 
         return true;
+    }
+
+    void repaint_options() {
+        tc_cursor_set_pos((uint16_t)(bounds.row + bounds.height - 2), bounds.col+1); 
+
+        unsigned width = bounds.col - 2;
+        unsigned num_printed = 0;
+        unsigned width_per_option = width / NUM_OPT;
+
+        for (unsigned i = 0; i < NUM_OPT; i++) {
+            if ((int)i == selected_option) {
+                tc_mode_set(Mode::BOLD, Color::BLACK, false, Color::WHITE, true); 
+            } else {
+                tc_mode_set(Mode::BOLD, Color::WHITE, true, Color::BLACK, false); 
+            }
+            
+            if (i+1 == NUM_OPT)
+                width_per_option = width - num_printed; 
+            num_printed += (unsigned)printf_aligned(width_per_option, Align::CENTER, "%s", options[i]);
+        }
+        tc_mode_reset();
     }
 };
