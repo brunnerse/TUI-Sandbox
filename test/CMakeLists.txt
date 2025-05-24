@@ -1,3 +1,4 @@
-add_subdirectory(app_basic)
+add_subdirectory(basic_app)
 add_subdirectory(image_display)
-#add_subdirectory(ncurses_basic)
+#add_subdirectory(textfile_app) //TODO
+#add_subdirectory(ncurses_basic) //TODO

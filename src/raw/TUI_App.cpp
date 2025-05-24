@@ -9,6 +9,7 @@
 
 void TUI_App::handler_exit(int i) 
 {
+	(void)i;
 	if (TUI_App::initialized_instance != nullptr)
 		TUI_App::initialized_instance->app_handler_exit();
 
@@ -16,6 +17,7 @@ void TUI_App::handler_exit(int i)
 
 void TUI_App::handler_window_size_changed(int i) 
 {
+	(void)i;
 	uint16_t cols, rows;
 	terminal_cfg_get_size(&rows, &cols);
 	if (TUI_App::initialized_instance != nullptr) {
@@ -34,6 +36,8 @@ void TUI_App::app_handler_window_size_changed(uint16_t new_rows, uint16_t new_co
 {
 	this->terminal_rows = new_rows;
 	this->terminal_columns = new_columns;
+
+	this->repaint_all();
 }
 
 
@@ -77,7 +81,7 @@ int TUI_App::init_terminal()
 	signal(SIGINT, handler_exit); 
 	signal(SIGWINCH, handler_window_size_changed); 
 
-	this->initialized = true;
+	this->terminal_initialized = true;
 	return 0;
 }
 
@@ -89,7 +93,7 @@ int TUI_App::uninit_terminal()
 
 	terminal_cfg_restore();	
 
-	this->initialized = false;
+	this->terminal_initialized = false;
 	TUI_App::initialized_instance = nullptr;
 
 	return 0;

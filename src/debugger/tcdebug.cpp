@@ -32,13 +32,15 @@ int main(int argc, char **argv)
 
     if (argc == 1) {
         printf(
-            "Usage: %s [-o file.txt] [-f </dev/pts/XX>] <program> [<args for program>]\n"
+            "Usage: %s [-o file.txt] [-o </dev/pts/XX>] <program> [<args for program>]\n"
             "\t-o output file (default: <program>.txt)\n" 
-            "\t-f forward to file (default: <program>.txt) (output of tty) TODO even necessary or just second output file??\n" 
+            "\t-o output to other terminal <dev/pts/XX>; use output of tty command in other terminal\n" 
         ,argv[0]);
 
         return 0;
     }
+
+    // TODO handle multiple filenames
 
     // Iterate through flags
     std::string out_filename("");
@@ -132,6 +134,7 @@ int main(int argc, char **argv)
     struct termios old_term_settings = term_settings; 
     term_settings.c_lflag &= ~ICANON; /* disable buffered i/o */
     term_settings.c_lflag &= ~ECHO; /* disable echo mode */
+    term_settings.c_cc[VMIN] = 1;
     tcsetattr(0, TCSANOW, &term_settings); /* use these new terminal i/o settings now */
 
     while (!sig_child_received)

@@ -12,6 +12,7 @@ target_include_directories(terminal_ctrl
 
 add_library(TUI_App
         TUI_App.cpp
+	print_helper.cpp
 )
 
 target_include_directories(TUI_App
