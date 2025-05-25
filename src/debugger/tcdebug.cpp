@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
+#include <limits.h>
 
 #include <string>
 
@@ -27,7 +28,7 @@ void sigchld_handler(int arg) {
     sig_child_received = true;
 }
 
-
+// TODO it is basically impossible to fake being a terminal, maybe try with SSH 
 
 
 int main(int argc, char **argv)
@@ -106,8 +107,8 @@ int main(int argc, char **argv)
     int pipe_fd_child_stdout[2];
     int pipe_fd_child_stdin[2];
 
-    assert(0 == pipe2(pipe_fd_child_stdout, O_NONBLOCK));
-    assert(0 == pipe2(pipe_fd_child_stdin, O_NONBLOCK));
+    assert(0 == pipe2(pipe_fd_child_stdout, 0));
+    assert(0 == pipe2(pipe_fd_child_stdin, 0));
 
     pid_t child_pid = fork();
 
@@ -139,14 +140,11 @@ int main(int argc, char **argv)
             }
         }
 */
+        execvp(argv[arg_idx], (char* const*)(argv + arg_idx)); 
 
-        // TODO stdout loss on program exit: when program quits, somehow wait until pipe output has been fully processed
-        // TODO set 
-
-        execvp(argv[arg_idx], (char* const*)(argv + arg_idx)); //TODO currently requires full path, e.g. /usr/bin/echo instead of echo
         // This should never be reached, unless execv failed
         fprintf(stderr, "[Error] execv exited with error code %d\n", errno);
-
+        
         close(pipe_fd_child_stdout[1]);
         close(pipe_fd_child_stdin[0]);
         return -1; 
@@ -180,16 +178,19 @@ int main(int argc, char **argv)
             write(fd_child_stdin, &c, 1);
         }
 
-        char c;
-        if (0 < read(fd_child_stdout, &c, 1)) {
+        char buf[PIPE_BUF];
+        ssize_t nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
+        if (nbytes > 0) {
             // fprintf(stderr, "[Parent] From child: '%c', writing to file\n", c);
-            putc(c, stdout);
-            
-            // TODO instead of simply copying it to file, analyse it 
+            for (int i = 0; i < nbytes; i++) {
+                char c = buf[i];
+                putc(c, stdout);
+                // TODO instead of simply copying it to file, analyse it 
 
-            putc(c, out_file);
-            if (out_file_2 != nullptr)
-                putc(c, out_file_2);
+                putc(c, out_file);
+                if (out_file_2 != nullptr)
+                    putc(c, out_file_2);
+            }
         }
     }
 
