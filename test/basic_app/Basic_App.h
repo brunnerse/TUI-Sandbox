@@ -25,6 +25,13 @@ public:
 
 private:
 
+    enum class Status {
+        IDLE, 
+        EXIT
+    };
+
+    Status status = Status::IDLE;
+
     const time_t start_time_s;
     time_t current_time_ms;
     time_t current_time_epoch_s;
@@ -45,5 +52,6 @@ private:
     std::unique_ptr<Time_Component> comp_time = nullptr;
     std::unique_ptr<TextBox_Component> comp_text = nullptr;
     std::unique_ptr<CommandLine_Component> comp_cmdline = nullptr;
+    std::unique_ptr<Exit_Component<2>> comp_exit = nullptr;
 };
 

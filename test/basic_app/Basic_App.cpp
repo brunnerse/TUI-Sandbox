@@ -35,13 +35,22 @@ int Basic_App::repaint_all() {
     *TUI_App::get_bounds(comp_cmdline.get())    =  rectangle_t(terminal_rows, 1, 1, terminal_columns);
     *TUI_App::get_bounds(comp_text.get())       =  rectangle_t(terminal_rows/2-1, terminal_columns/2-10, 3, 20);
 
+    *TUI_App::get_bounds(comp_exit.get())    =  rectangle_t(terminal_rows/2-2, terminal_columns/2-12, 4, 25);
+
     // Empty screen and repaint all
     tc_erase_all();
-    this->comp_win_size->repaint();
-    this->comp_status->repaint();
-    this->comp_time->repaint();
-    this->comp_cmdline->repaint();
-    this->comp_text->repaint();
+    if (this->status == Status::IDLE) 
+    {
+        this->comp_win_size->repaint();
+        this->comp_status->repaint();
+        this->comp_time->repaint();
+        this->comp_cmdline->repaint();
+        this->comp_text->repaint();
+    } 
+    else if (this->status == Status::EXIT) 
+    {
+        this->comp_exit->repaint();
+    }
 
     return 0;
 }
@@ -56,7 +65,12 @@ int Basic_App::init_graphics() {
     this->comp_cmdline = std::make_unique<CommandLine_Component>();
     this->comp_text = std::make_unique<TextBox_Component>("Basic App");
 
-    this->comp_text->set_cfg(Mode::BLINKING, Color::GREEN, true, Color::BLACK, false);
+    this->comp_exit = std::make_unique<Exit_Component<2>>();
+    comp_exit->set_option_text(0, "Yes");
+    comp_exit->set_option_text(1, "No");
+
+
+   this->comp_text->set_cfg(Mode::BLINKING, Color::GREEN, true, Color::BLACK, false);
 
 
     this->repaint_all();
@@ -173,16 +187,10 @@ bool Basic_App::show_exit_screen()
     tc_erase_all();
 
 
-    std::unique_ptr<Exit_Component<NUM_EXIT_OPTIONS>> comp_exit = std::make_unique<Exit_Component<NUM_EXIT_OPTIONS>>();
-
-    *TUI_App::get_bounds(comp_exit.get())    =  rectangle_t(terminal_rows/2-2, terminal_columns/2-12, 4, 25);
-
-    comp_exit->set_option_text(0, "Yes");
-    comp_exit->set_option_text(1, "No");
-
-    comp_exit->repaint();
-
     comp_exit->set_option(1);
+
+    this->status = Status::EXIT;
+    this->repaint_all();
     
 
     std::string escape_expression;
@@ -219,6 +227,7 @@ bool Basic_App::show_exit_screen()
     if (comp_exit->get_option() == 0) {
         this->running = false;
     } else {
+        this->status = Status::IDLE;
         this->repaint_all();
     }
 

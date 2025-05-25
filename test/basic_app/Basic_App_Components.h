@@ -307,7 +307,7 @@ public:
     void repaint_options() {
         tc_cursor_set_pos((uint16_t)(bounds.row + bounds.height - 2), bounds.col+1); 
 
-        unsigned width = bounds.col - 2;
+        unsigned width = bounds.width - 2;
         unsigned num_printed = 0;
         unsigned width_per_option = width / NUM_OPT;
 
