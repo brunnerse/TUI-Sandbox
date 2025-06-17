@@ -14,6 +14,13 @@
 #include <string>
 
 #include "terminal_cfg.h"
+#include "terminal_traffic_analyzer.h"
+
+#include "tcdebug_arg_parse.h"
+
+
+#define INTERCEPT_INPUT 1
+
 
 volatile bool sig_int_received = false;
 volatile bool sig_child_received = false;
@@ -33,56 +40,14 @@ void sigchld_handler(int arg) {
 
 int main(int argc, char **argv)
 {
-    assert(argc > 0);
+    tcdebug_args args;
+    if (!tcdebug_parse_args(argc, argv, true, true, &args))
+        return 1;
 
-    if (argc == 1) {
-        printf(
-            "Usage: %s [-o file.txt] [-o </dev/pts/XX>] <program> [<args for program>]\n"
-            "\t-o output file (default: <program>.txt)\n" 
-            "\t-o output to other terminal </dev/pts/XX>; use output of tty command in other terminal\n" 
-        ,argv[0]);
+    if (args.out_files[0].empty())
+        args.out_files[0] =  get_default_out_filename(&args);
 
-        return 0;
-    }
-
-    // Iterate through flags; copy up to two filenames
-    std::string out_filename;
-    std::string out_filename_2;
-
-    int arg_idx = 1;
-    while (arg_idx < argc && argv[arg_idx][0] == '-') {
-        switch (argv[arg_idx][1]) {
-        case 'o':
-            arg_idx++;
-            assert(arg_idx < argc);
-
-            if (out_filename.empty())
-                out_filename = argv[arg_idx];
-            else 
-                out_filename_2 = argv[arg_idx];
-            break;
-        default:
-            fprintf(stderr, "Ignoring invalid command option '%s'\n", argv[arg_idx]);
-        }
-        arg_idx++;
-    }
-
-    // Assuming that <program> is at arg_idx now
-    assert(arg_idx < argc);
-
-    // If no filename given, assign default filename 
-    if (out_filename.empty()) {
-        out_filename = argv[arg_idx]; 
-        out_filename = out_filename.substr(out_filename.find_last_of('/')+1);
-        out_filename.append(".txt");
-    }
-
-    printf("--------------------\n");
-    printf("Output to file '%s'\n", out_filename.c_str());
-    if (!out_filename_2.empty())
-    printf("   And to file '%s'\n", out_filename_2.c_str());
-    printf("--------------------\n");
-
+    print_parsed_args_info(&args);
 
     signal(SIGINT, sigint_handler);
     signal(SIGCHLD, sigchld_handler);
@@ -92,23 +57,27 @@ int main(int argc, char **argv)
     terminal_cfg_set(false, false, true);
 
     FILE *out_file = nullptr, *out_file_2 = nullptr;
-    out_file   = fopen(out_filename.c_str(), "a"); //TODO open in which mode?
-    if (!out_filename_2.empty())
-        out_file_2 = fopen(out_filename_2.c_str(), "a"); //TODO open in which mode?
+    out_file   = fopen(args.out_files[0].c_str(), "a"); //TODO open in which mode?
+    if (!args.out_files[1].empty())
+        out_file_2 = fopen(args.out_files[1].c_str(), "a"); //TODO open in which mode?
 
-    // Disable output buffer for /dev/xx files
-    if (out_filename.find_first_of("/dev/") == 0)
+    // Disable output buffer for tty outputs (/dev/xx files)
+    if (args.out_files[0].find_first_of("/dev/") == 0)
         setbuf(out_file, NULL); 
-    if (out_filename_2.find_first_of("/dev/") == 0)
+    if (args.out_files[1].find_first_of("/dev/") == 0)
         setbuf(out_file_2, NULL); 
+
+    // Disable stdout buffer
+    setbuf(stdout, NULL);
 
 
     // Create pipes from and to child process
     int pipe_fd_child_stdout[2];
-    int pipe_fd_child_stdin[2];
-
     assert(0 == pipe2(pipe_fd_child_stdout, 0));
+#if INTERCEPT_INPUT
+    int pipe_fd_child_stdin[2];
     assert(0 == pipe2(pipe_fd_child_stdin, 0));
+#endif
 
     pid_t child_pid = fork();
 
@@ -116,19 +85,21 @@ int main(int argc, char **argv)
     {
         // Inside child process
         printf("[Child] =============\n");
-        printf("[Child] Executing '%s",argv[arg_idx]);
-        for (int idx = arg_idx+1; idx < argc; idx++)
-            printf(" %s", argv[idx]);
+        printf("[Child] Executing '%s", args.program);
+        for (int idx = 0; idx < args.program_argc; idx++)
+            printf(" %s", args.program_argv[idx]);
         printf("'\n");
         printf("[Child] =============\n");
 
         // Child stdout: Close pipe read direction, dup pipe write direction to stdout
         close(pipe_fd_child_stdout[0]);
-        dup2(pipe_fd_child_stdout[1], 1);
+        dup2(pipe_fd_child_stdout[1], STDOUT_FILENO);
 
         // Child stdout: Close pipe write direction, dup pipe read direction to stdout
+#if INTERCEPT_INPUT
         close(pipe_fd_child_stdin[1]);
-        dup2(pipe_fd_child_stdin[0], 0);
+        dup2(pipe_fd_child_stdin[0], STDIN_FILENO);
+#endif
     
 /*
         printf("[Child] Checkpoint\n");
@@ -140,13 +111,15 @@ int main(int argc, char **argv)
             }
         }
 */
-        execvp(argv[arg_idx], (char* const*)(argv + arg_idx)); 
+        execvp(args.program, args.program_argv); 
 
         // This should never be reached, unless execv failed
         fprintf(stderr, "[Error] execv exited with error code %d\n", errno);
         
         close(pipe_fd_child_stdout[1]);
+#if INTERCEPT_INPUT
         close(pipe_fd_child_stdin[0]);
+#endif
         return -1; 
     }
 
@@ -163,29 +136,35 @@ int main(int argc, char **argv)
     int fd_child_stdout = pipe_fd_child_stdout[0];
 
     // Write child stdin: Close pipe read direction, use pipe write direction
+#if INTERCEPT_INPUT
     close(pipe_fd_child_stdin[0]);
     int fd_child_stdin = pipe_fd_child_stdin[1];
+#endif
 
     // fprintf(stderr, "[Parent] Checkpoint\n");
 
+    TerminalTrafficAnalyzer analyzer(stdout); // TODO open file from arg instead
 
+    // TODO ncurses program does not get my input
     while (!sig_child_received)
     {
+#if INTERCEPT_INPUT
         int i = getchar();
         if (i != EOF) {
-            // fprintf(stderr, "[Parent] getchar '%c', writing to child\n", (char)i);
+            //fprintf(stderr, "[Parent] getchar '%c', writing to child\n", (char)i);
             char c = (char)i;
             write(fd_child_stdin, &c, 1);
         }
+#endif
 
         char buf[PIPE_BUF];
         ssize_t nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
         if (nbytes > 0) {
-            // fprintf(stderr, "[Parent] From child: '%c', writing to file\n", c);
             for (int i = 0; i < nbytes; i++) {
                 char c = buf[i];
+                //fprintf(stderr, "[Parent] From child: '%c', writing to file\n", c);
                 putc(c, stdout);
-                // TODO instead of simply copying it to file, analyse it 
+                // TODO in file: replace escape codes with their names, insert newlines to improve visibility
 
                 putc(c, out_file);
                 if (out_file_2 != nullptr)
