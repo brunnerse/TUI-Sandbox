@@ -107,7 +107,7 @@ int Basic_App::run() {
                 status_set((std::string("Unknown command: ") + command).c_str());
             }
             clear_status_time_ms = current_time_ms + 2000;
-        } else if (c == DEL[0]) {
+        } else if (c == DEL) {
             comp_cmdline->pop_char();
         } else  {
             comp_cmdline->push_char((char)c);
@@ -200,7 +200,7 @@ bool Basic_App::show_exit_screen()
         int c = getchar();
 
         if (c != EOF) {
-            if (c == ESC[0]) {
+            if (c == ESC) {
                 escaped = !escaped;
                 escape_expression.clear();
             }

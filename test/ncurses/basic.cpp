@@ -4,9 +4,12 @@
 
 static void finish(int sig);
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
+
+
     int num = 0;
 
     /* initialize your non-curses data structures here */
@@ -40,7 +43,7 @@ main(int argc, char *argv[])
 
     for (;;)
     {
-        int c = getch();     /* refresh, accept single keystroke of input */
+        (void) getch();     /* Wait until a single keystroke of input */
         attrset(COLOR_PAIR(num % 8));
         num++;
 
@@ -52,6 +55,8 @@ main(int argc, char *argv[])
 
 static void finish(int sig)
 {
+    (void)sig;
+
     endwin();
 
     /* do your non-curses wrapup here */

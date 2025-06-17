@@ -1,4 +1,6 @@
 
+include_directories(${CMAKE_SOURCE_DIR}/src)
+
 add_library(terminal_ctrl
         tc.cpp
         terminal_cfg.cpp
