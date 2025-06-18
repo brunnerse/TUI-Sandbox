@@ -22,12 +22,21 @@ void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size)
         const char *token = "";
         const char *description = "";
         if (parse_esc_code(c, &token, &description)) {
-            // Write all previous data
-            if (i > data_idx)
-                fwrite(data + data_idx, i - data_idx, 1, out_file);
+            input_buffer.push_back('<');
+            if (token != "?") {
+                input_buffer.append(token);
+                //input_buffer.append(": "); input_buffer.append(description);
+            } else 
+            {
+                char s[10];
+                snprintf(s, sizeof(s), "\\x%02x", c);
+                input_buffer.append(s);
+            }
+            input_buffer.push_back('>');
+        } else {
+            input_buffer.push_back(c);
         }
 
-        input_buffer.push_back(c);
         // Check if should wait for next character
         if (!(this->INPUT_WAIT_NEWLINE && c == '\n'))
             continue;
@@ -139,7 +148,10 @@ bool TerminalTrafficAnalyzer::parse_esc_code(char c, const char **out_token, con
            *out_description = "Formfeed";
            break;
         default:
-            return false;
+            if (c >= '!' && c <= '~')
+                return false;
+            *out_token = "?";
+           *out_description = "unknown";
     }
     return true;
 }

@@ -36,8 +36,6 @@ void sigchld_handler(int arg) {
     sig_child_received = true;
 }
 
-// TODO it is basically impossible to fake being a terminal, maybe try with SSH 
-
 
 int main(int argc, char **argv)
 {
@@ -48,7 +46,7 @@ int main(int argc, char **argv)
     print_parsed_args_info(&args);
 
     std::string out_filename = (!args.out_files[0].empty() ? 
-        args.out_files[0] : get_default_out_filename(args));
+        args.out_files[0] : get_default_out_filename(&args));
 
 
     signal(SIGINT, sigint_handler);
@@ -61,7 +59,7 @@ int main(int argc, char **argv)
     FILE *out_file = nullptr, *out_file_2 = nullptr;
     out_file   = fopen(out_filename.c_str(), "a"); //TODO open in append or write mode?
 
-    // Disable output buffer for /dev/xx files
+    // Disable output buffer for /dev/xx files 
     if (out_filename.find_first_of("/dev/") == 0)
         setbuf(out_file, NULL); 
     // Disable stdout buffer

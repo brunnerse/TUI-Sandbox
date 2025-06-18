@@ -73,17 +73,23 @@ int main(int argc, char **argv)
 
 
 
-    int child_pid = fork();
-    if (child_pid != 0) {
+//    pid_t child_pid = fork();
+//    if (child_pid != 0) {
+//        printf("[Child] Child has PID %lu\n", (unsigned long)child_pid);
         char cmd[100];
         int retval = snprintf(cmd, 100, "cat $(tty) | tee /proc/%u/fd/%u | %s | tee /proc/%u/fd/%u\n",
             own_pid, fd_program_input, 
-            (args.program != nullptr) ? args.program : "<program>", 
+            args.program,
             own_pid, fd_program_output);
         assert(retval > 0 && retval < 100); 
 
-        exit(system(cmd));
-    }
+        printf("[Child] Executing %s", cmd);
+
+        
+        char* const sh_argv[3] = {"sh" "-c", cmd};
+        execvp(sh_argv[0], sh_argv);
+//        exit(system(args.program));
+ //   }
 
 
     TerminalTrafficAnalyzer analyzer(out_file);
@@ -96,14 +102,14 @@ int main(int argc, char **argv)
 
         ssize_t nbytes = read(fd_program_input, &buf, PIPE_BUF);
         if (nbytes > 0) {
-            analyzer.capture_input(buf, (unsigned long)nbytes);
+            //analyzer.capture_input(buf, (unsigned long)nbytes);
             buf[nbytes+1] = '\0';
             printf("[IN] %s\n", buf);
         }
 
         nbytes = read(fd_program_output, &buf, PIPE_BUF);
         if (nbytes > 0) {
-            analyzer.capture_output(buf, (unsigned long)nbytes);
+            //analyzer.capture_output(buf, (unsigned long)nbytes);
             buf[nbytes+1] = '\0';
             printf("[OUT] %s\n", buf);
         }

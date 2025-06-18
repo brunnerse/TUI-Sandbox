@@ -102,10 +102,10 @@ int main(int argc, char **argv)
     printf("Stopped.\n");
     printf("==================\n");
 
+    terminal_cfg_restore();
+
     if (out_file != stdout)
         fclose(out_file);
-
-    terminal_cfg_restore();
 
     return 0;
 }

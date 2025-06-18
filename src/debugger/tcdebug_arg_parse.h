@@ -20,8 +20,8 @@ inline void print_usage(char **argv, bool two_output_files, bool program_require
         "Usage: %s [-o file.txt] [-o </dev/pts/XX>] %s [<args for program>]\n%s%s", 
         argv[0], 
         program_required ? "<program>" : "[program]", 
-        "\t-o output file (default: <program>.txt)\n%s",
-        two_output_files ? "\t-o output to other terminal </dev/pts/XX>;"
+        "\t-o output file (default: <program>.txt)\n",
+        two_output_files ? "\t-o output to another terminal </dev/pts/XX>; "
                             "use output of tty command in other terminal\n"  : ""
     );
 }
@@ -48,6 +48,10 @@ inline std::string get_default_out_filename(const tcdebug_args* parsed_args)
 inline void print_parsed_args_info(const tcdebug_args* args)
 {
     printf("--------------------\n");
+    printf("Executing program '%s", args->program);
+    for (int idx = 1; idx < args->program_argc; idx++)
+            printf(" %s", args->program_argv[idx]);
+    printf("'\n");
     printf("Output to file '%s'\n", args->out_files[0].c_str());
     if (!args->out_files[1].empty())
         printf("   And to file '%s'\n", args->out_files[1].c_str());

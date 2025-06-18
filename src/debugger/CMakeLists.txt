@@ -8,6 +8,17 @@ target_link_libraries(tcdebug
 	TrafficAnalyzer
 )
 
+
+
+add_executable(tcdebug_tee
+        tcdebug.cpp
+)
+
+target_link_libraries(tcdebug_tee
+        terminal_ctrl
+	TrafficAnalyzer
+)
+
 add_executable(tc_intercept
         tc_intercept.cpp
 )
