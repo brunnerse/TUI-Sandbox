@@ -72,42 +72,7 @@ public:
 
 
 
-class Time_Component : public TUI_Component {
 
-private:
-    time_t current_time_ms, current_time_s;
-    const time_t start_time_s;
-
-public:
-    Time_Component(time_t start_time_s) 
-    : start_time_s(start_time_s) 
-    {}
-
-    bool update(long current_time_ms, long current_time_s) {
-        this->current_time_ms = current_time_ms;
-        this->current_time_s = current_time_s;
-
-        return this->repaint();
-    }
-
-    bool repaint() {
-        assert(bounds.height == 3);
-        tc_mode_set(Mode::ITALIC, Color::RED, true, Color::BLACK, true);
-
-        tc_cursor_set_pos(bounds.row, bounds.col);
-        printf_aligned(bounds.width, Align::RIGHT, "[ms] %13lu", current_time_ms - start_time_s * 1000);
-        tc_cursor_set_pos(bounds.row + 1, bounds.col);
-        printf_aligned(bounds.width, Align::RIGHT, "[Epoch] %13lu", current_time_s);
-        tc_cursor_set_pos(bounds.row + 2, bounds.col);
-        std::string datestr(asctime(localtime(&current_time_s)));
-        datestr.pop_back(); // Remove trailing \n
-        printf_aligned(bounds.width, Align::RIGHT, "%s", datestr.c_str());
-
-        tc_mode_reset();
-
-        return true;
-    }
-};
 
 
 class Status_Component : public TUI_Component {
@@ -154,86 +119,44 @@ private:
 
 };
 
-class WindowSize_Component : public TUI_Component {
+
+class Player_Component : public TUI_Component {
+
 private:
-    uint16_t width;
-    uint16_t terminal_width, terminal_height;
+    uint16_t width, height;
+
+    uint16_t pos_x, pos_y;
 
 public:
-    WindowSize_Component(uint16_t term_width, uint16_t term_height) 
-    : terminal_width(term_width), terminal_height(term_height)
-    {
-    }
+    Player_Component() {}
 
-    void update_winsize_values(uint16_t term_width, uint16_t term_height) {
-        this->terminal_width = term_width;
-        this->terminal_height = term_height;
+
+    bool update(const char* text) {
+        strncpy(this->text, text, TEXT_MAX_LEN);
+        return this->repaint();
     }
 
 
     bool repaint() {
-        // Print terminal rows and columns in top right
-//        char strbuf[100];
-//        snprintf(strbuf, 100, "%u rows, %u columns\n", terminal_width, terminal_height);
-
-        tc_cursor_set_pos(bounds.row, bounds.col);
-        tc_mode_set(Mode::ITALIC, Color::MAGENTA, true);
-        printf_aligned(bounds.width, Align::RIGHT, "%u rows, %u columns", terminal_width, terminal_height);
+        tc_mode_set_bg(Color::WHITE, true);
+        for (uint16_t row = bounds.row; row < bounds.row + bounds.height; row++) {
+            tc_cursor_set_pos(row, bounds.col); 
+            if ((row - bounds.row) == bounds.height/2) {
+                printf_aligned(bounds.width, Align::CENTER, "%s", text);
+            } else {
+                print_spaces(bounds.width);
+            }
+        }
         tc_mode_reset();
 
         return true;
     }
-
 };
 
 
-class CommandLine_Component : public TUI_Component {
-private:
-    std::string line;
-    uint16_t output_width = 0;
 
-public:
 
-    bool push_char(char c) {
-        line.push_back(c);
-        return update();
-    }
 
-    bool pop_char() {
-        if (line.size() < 1)
-            return false;
-        line.pop_back();
-        output_width -= 1;
-        tc_cursor_set_pos(bounds.row, bounds.col + output_width);
-        tc_erase_after_cursor(true);
-        return true;
-    }
-
-    std::string clear() {
-        std::string cpy = line;
-        line.clear();
-        output_width = 0;
-
-        repaint();
-
-        return cpy;
-    } 
-
-    bool repaint() {
-        tc_cursor_set_pos(bounds.row, bounds.col);
-        tc_erase_after_cursor(true);
-
-        printf("%s", line.c_str());
-        output_width = (uint16_t)line.size();
-        return true; 
-    }
-
-    bool update() {
-        tc_cursor_set_pos(bounds.row, bounds.col + output_width);
-        output_width += (uint16_t)printf("%s", &line.c_str()[output_width]);
-        return true;
-    }
-};
 
 template <unsigned NUM_OPT=2>
 class Exit_Component : public TUI_Component {

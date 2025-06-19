@@ -13,24 +13,23 @@
 
 void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size) 
 {
-    unsigned long data_idx = 0;
-
     for (unsigned long i = 0; i < size; i++) 
     {
         char c = data[i];
 
         const char *token = "";
         const char *description = "";
+        // TODO what about escape expressions?
         if (parse_esc_code(c, &token, &description)) {
             input_buffer.push_back('<');
-            if (token != "?") {
-                input_buffer.append(token);
-                //input_buffer.append(": "); input_buffer.append(description);
-            } else 
-            {
+            if (token[0] == '?') {
+                // Escape expression unknown; Add hex value to buffer
                 char s[10];
                 snprintf(s, sizeof(s), "\\x%02x", c);
                 input_buffer.append(s);
+            } else {
+                input_buffer.append(token);
+                //input_buffer.append(": "); input_buffer.append(description);
             }
             input_buffer.push_back('>');
         } else {

@@ -80,9 +80,9 @@ int main(int argc, char **argv)
     {
         // Inside child process
         printf("[Child] =============\n");
-        printf("[Child] Executing '%s",argv[arg_idx]);
-        for (int idx = arg_idx+1; idx < argc; idx++)
-            printf(" %s", argv[idx]);
+        printf("[Child] Executing '%s",args.program);
+        for (int idx = 0; idx < args.program_argc; idx++)
+            printf(" %s", args.program_argv[idx]);
         printf("'\n");
         printf("[Child] =============\n");
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
             }
         }
 */
-        execvp(argv[arg_idx], (char* const*)(argv + arg_idx)); 
+        execvp(args.program_argv[0], (char* const*)args.program_argv); 
 
         // This should never be reached, unless execv failed
         fprintf(stderr, "[Error] execv exited with error code %d\n", errno);
@@ -136,7 +136,8 @@ int main(int argc, char **argv)
     int fd_child_stdin = pipe_fd_child_stdin[1];
 #endif
 
-    TerminalTrafficAnalyzer analyzer(STDERR_FILENO);
+    // TODO use stderr or stdout?
+    TerminalTrafficAnalyzer analyzer(stderr);
 
     // fprintf(stderr, "[Parent] Checkpoint\n");
 
@@ -149,14 +150,14 @@ int main(int argc, char **argv)
         (void)nbytes;
         nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
         if (nbytes > 0) {
-            analyzer.capture_input(buf, nbytes);
+            analyzer.capture_input(buf, (uint32_t)nbytes);
         }
 #endif
         nbytes = tee(fd_child_stdout, STDOUT_FILENO, PIPE_BUF, SPLICE_F_NONBLOCK);
         (void)nbytes;
         nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
         if (nbytes > 0) {
-            analyzer.capture_output(buf, nbytes);
+            analyzer.capture_output(buf, (uint32_t)nbytes);
         }
     }
 

@@ -86,8 +86,10 @@ int main(int argc, char **argv)
         printf("[Child] Executing %s", cmd);
 
         
-        char* const sh_argv[3] = {"sh" "-c", cmd};
-        execvp(sh_argv[0], sh_argv);
+        execl("/bin/sh", "sh", "-c", cmd, (char*)nullptr);
+
+        //char* const sh_argv[3] = {"sh" "-c", cmd};
+//        execvp(sh_argv[0], sh_argv);
 //        exit(system(args.program));
  //   }
 

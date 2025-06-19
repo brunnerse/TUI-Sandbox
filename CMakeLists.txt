@@ -32,6 +32,6 @@ add_compile_options(
 )
 
 
-
 add_subdirectory(src)
+add_subdirectory(sample_programs)
 add_subdirectory(test)

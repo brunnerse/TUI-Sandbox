@@ -1,5 +1,5 @@
 
-include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_SOURCE_DIR}/src) # For ANSI_Escape_Codes.h
 
 add_library(terminal_ctrl
         tc.cpp

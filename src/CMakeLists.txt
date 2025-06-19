@@ -1,3 +1,2 @@
-#add_subdirectory(ncurses)
-add_subdirectory(raw)
-add_subdirectory(debugger)
+add_subdirectory(analyzer)
+add_subdirectory(raw_tui)
