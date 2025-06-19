@@ -6,7 +6,7 @@ Recommended to use: use\_tee\_cmd
 
 - **use\_tee\_cmd\_manual**:   User must paste  *tee <file> | <program> | tee <file>* command manually in a second terminal. Inconvenient to use, was just created for initial test purposes.
 
-- **use\_pipe\_function**: Uses pipe() to forward stdin and stdout to and from the program, which is executed as a child within the process. Does not work well.
+- **use\_pipe\_function**: Uses pipe() to forward stdin and stdout to and from the program, which is executed as a child within the process.
 
 
 Note: The interception only works with programs who don't check if they are connected directly to a terminal; 

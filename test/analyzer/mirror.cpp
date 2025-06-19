@@ -16,7 +16,6 @@
 #include "terminal_cfg.h"
 
 
-#define WRITE_TO_FILE_IMMEDIATELY true
 #define DEBUG_STDERR 0
 
 #define HEARTBEAT 1
@@ -46,6 +45,8 @@ int main()
 
     terminal_cfg_store();
     terminal_cfg_set(false, false, true);
+
+    setbuf(stdout, NULL);
 
     while (!sig_int_received)
     {

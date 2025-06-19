@@ -75,7 +75,17 @@ int TUI_App::init_terminal()
 		tc_alt_screen_enter();
 
 	// Read terminal size
-	terminal_cfg_get_size(&this->terminal_rows, &this->terminal_columns);
+	if (isatty(STDOUT_FILENO))
+	{
+		terminal_cfg_get_size(&this->terminal_rows, &this->terminal_columns);
+	}
+	else
+	{
+		// Not connected to output terminal; still start the application using default size values
+		this->terminal_rows = 100;
+		this->terminal_columns = 80;
+	}
+
 
 	// Setup signal handlers
 	signal(SIGINT, handler_exit); 
