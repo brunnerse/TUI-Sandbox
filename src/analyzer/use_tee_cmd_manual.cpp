@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 {
 
     tcdebug_args args;
-    if (!tcdebug_parse_args(argc, argv, false, true, &args))
+    if (!tcdebug_parse_args(argc, argv, false, false, &args))
         return 1;
 
     FILE *out_file;
@@ -71,7 +71,8 @@ int main(int argc, char **argv)
 
     printf("====== Setup ======\n");
     printf("Type in other terminal:\n");
-    printf("cat $(tty) | tee /proc/%u/fd/%u | %s | tee /proc/%u/fd/%u\n",
+//    printf("cat $(tty) | tee /proc/%u/fd/%u | %s | tee /proc/%u/fd/%u\n",
+    printf("tee /proc/%u/fd/%u | %s | tee /proc/%u/fd/%u\n",
         own_pid, fd_program_input, 
         (args.program != nullptr) ? args.program : "<program>", 
         own_pid, fd_program_output);
@@ -87,14 +88,14 @@ int main(int argc, char **argv)
         if (nbytes > 0) {
             analyzer.capture_input(buf, (unsigned long)nbytes);
             buf[nbytes+1] = '\0';
-            //printf("[IN] %s\n", buf);
+            printf("[IN] %s\n", buf);
         }
 
         nbytes = read(fd_program_output, &buf, PIPE_BUF);
         if (nbytes > 0) {
             analyzer.capture_output(buf, (unsigned long)nbytes);
             buf[nbytes+1] = '\0';
-            //jkprintf("[OUT] %s\n", buf);
+            printf("[OUT] %s\n", buf);
         }
     }
 

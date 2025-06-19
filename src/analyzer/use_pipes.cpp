@@ -13,14 +13,17 @@
 
 #include <string>
 
+#include <errno.h>
+
 #include "terminal_cfg.h"
 #include "terminal_traffic_analyzer.h"
 
 #include "tcdebug_arg_parse.h"
 
-
 #define INTERCEPT_INPUT 1
 
+// Uses tee() to intercept process input and output
+// https://www.man7.org/linux/man-pages/man2/tee.2.html
 
 volatile bool sig_int_received = false;
 volatile bool sig_child_received = false;
@@ -35,19 +38,19 @@ void sigchld_handler(int arg) {
     sig_child_received = true;
 }
 
-// TODO it is basically impossible to fake being a terminal, maybe try with SSH 
-
 
 int main(int argc, char **argv)
 {
+
     tcdebug_args args;
-    if (!tcdebug_parse_args(argc, argv, true, true, &args))
+    if (!tcdebug_parse_args(argc, argv, false, true, &args))
         return 1;
 
     if (args.out_files[0].empty())
-        args.out_files[0] =  get_default_out_filename(&args);
-
+            args.out_files[0] = get_default_out_filename(&args);
+        
     print_parsed_args_info(&args);
+
 
     signal(SIGINT, sigint_handler);
     signal(SIGCHLD, sigchld_handler);
@@ -56,27 +59,23 @@ int main(int argc, char **argv)
     terminal_cfg_store();
     terminal_cfg_set(false, false, true);
 
-    FILE *out_file = nullptr, *out_file_2 = nullptr;
-    out_file   = fopen(args.out_files[0].c_str(), "a"); //TODO open in which mode?
-    if (!args.out_files[1].empty())
-        out_file_2 = fopen(args.out_files[1].c_str(), "a"); //TODO open in which mode?
+    FILE *out_file = nullptr;
+    out_file   = fopen(args.out_files[0].c_str(), "w");
 
-    // Disable output buffer for tty outputs (/dev/xx files)
+    // Disable output buffer for /dev/xx files 
     if (args.out_files[0].find_first_of("/dev/") == 0)
         setbuf(out_file, NULL); 
-    if (args.out_files[1].find_first_of("/dev/") == 0)
-        setbuf(out_file_2, NULL); 
-
     // Disable stdout buffer
     setbuf(stdout, NULL);
 
 
     // Create pipes from and to child process
     int pipe_fd_child_stdout[2];
-    assert(0 == pipe2(pipe_fd_child_stdout, 0));
+    assert(0 == pipe2(pipe_fd_child_stdout, O_NONBLOCK));
+
 #if INTERCEPT_INPUT
     int pipe_fd_child_stdin[2];
-    assert(0 == pipe2(pipe_fd_child_stdin, 0));
+    assert(0 == pipe2(pipe_fd_child_stdin, O_NONBLOCK));
 #endif
 
     pid_t child_pid = fork();
@@ -85,7 +84,7 @@ int main(int argc, char **argv)
     {
         // Inside child process
         printf("[Child] =============\n");
-        printf("[Child] Executing '%s", args.program);
+        printf("[Child] Executing '%s",args.program);
         for (int idx = 0; idx < args.program_argc; idx++)
             printf(" %s", args.program_argv[idx]);
         printf("'\n");
@@ -95,7 +94,7 @@ int main(int argc, char **argv)
         close(pipe_fd_child_stdout[0]);
         dup2(pipe_fd_child_stdout[1], STDOUT_FILENO);
 
-        // Child stdout: Close pipe write direction, dup pipe read direction to stdout
+        // Child stdin: Close pipe write direction, dup pipe read direction to stdin
 #if INTERCEPT_INPUT
         close(pipe_fd_child_stdin[1]);
         dup2(pipe_fd_child_stdin[0], STDIN_FILENO);
@@ -111,7 +110,7 @@ int main(int argc, char **argv)
             }
         }
 */
-        execvp(args.program, args.program_argv); 
+        execvp(args.program_argv[0], (char* const*)args.program_argv); 
 
         // This should never be reached, unless execv failed
         fprintf(stderr, "[Error] execv exited with error code %d\n", errno);
@@ -141,49 +140,42 @@ int main(int argc, char **argv)
     int fd_child_stdin = pipe_fd_child_stdin[1];
 #endif
 
-    // fprintf(stderr, "[Parent] Checkpoint\n");
+    TerminalTrafficAnalyzer analyzer(out_file);
 
-    TerminalTrafficAnalyzer analyzer(stdout); // TODO open file from arg instead
-
-    // TODO ncurses program does not get my input
     while (!sig_child_received)
     {
+        char buf[PIPE_BUF];
+        ssize_t nbytes; 
 #if INTERCEPT_INPUT
-        int i = getchar();
-        if (i != EOF) {
-            //fprintf(stderr, "[Parent] getchar '%c', writing to child\n", (char)i);
-            char c = (char)i;
-            write(fd_child_stdin, &c, 1);
+        nbytes = read(STDIN_FILENO, &buf, PIPE_BUF);
+        if (nbytes > 0) {
+            write(fd_child_stdin, buf, (size_t)nbytes);
+            //analyzer.capture_input(buf, (size_t)nbytes);
+            buf[nbytes+1] = '\0';
+            fprintf(out_file, "[IN] %s\n", buf);
         }
 #endif
-
-        char buf[PIPE_BUF];
-        ssize_t nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
-        if (nbytes > 0) {
-            for (int i = 0; i < nbytes; i++) {
-                char c = buf[i];
-                //fprintf(stderr, "[Parent] From child: '%c', writing to file\n", c);
-                putc(c, stdout);
-                // TODO in file: replace escape codes with their names, insert newlines to improve visibility
-
-                putc(c, out_file);
-                if (out_file_2 != nullptr)
-                    putc(c, out_file_2);
-            }
+        nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
+        if (nbytes > 0)
+        {
+            write(STDOUT_FILENO, buf, (size_t)nbytes);
+            //analyzer.capture_output(buf, (size_t)nbytes);
+            buf[nbytes+1] = '\0';
+            fprintf(out_file, "[OUT] %s\n", buf);
         }
     }
 
 //    kill(child_pid, SIGINT)
 
-    printf("==================\n");
-    printf("Child process finished.\n");
-    printf("==================\n");
 
     terminal_cfg_restore();
 
+    printf("\n==================\n");
+    printf("Child process finished.\n");
+    printf("==================\n");
+
+
     fclose(out_file); 
-    if (out_file_2 != nullptr)
-        fclose(out_file_2); 
 
     return 0;
 }

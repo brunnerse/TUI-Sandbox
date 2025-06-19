@@ -1,8 +1,7 @@
 list(APPEND analyzer_files 
-	use_tee_function 
 	use_tee_cmd_manual 
 	use_tee_cmd 
-	use_pipe_function
+	use_pipes
 )
 
 
