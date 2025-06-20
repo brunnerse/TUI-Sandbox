@@ -48,6 +48,8 @@ int main()
 
     setbuf(stdout, NULL);
 
+    bool in_escape_expression = false;
+
     while (!sig_int_received)
     {
 #if HEARTBEAT
@@ -60,7 +62,7 @@ int main()
         int c = getchar();
         if (c == EOF)
             continue;
-
+        
         int old_c = c;        
 
 //        if (islower(c))
@@ -71,7 +73,26 @@ int main()
 #else
         (void)old_c;
 #endif
-        printf("From stdin: '%c'\n", c);
+
+        if (!in_escape_expression) {
+            if (c == '\e') {
+                in_escape_expression = true;
+                printf("From stdin: '%c", c);
+            }
+            else 
+                printf("From stdin: '%c'", c);
+        }
+        else 
+        {
+            if (isalpha(c)) {
+                in_escape_expression = false;
+                printf("%c'\n", c);
+            }
+            else 
+            {
+                printf("%c", c);
+            }
+        }
 
     }
 

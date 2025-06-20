@@ -85,7 +85,7 @@ int main(int argc, char **argv)
         // Inside child process
         printf("[Child] =============\n");
         printf("[Child] Executing '%s",args.program);
-        for (int idx = 0; idx < args.program_argc; idx++)
+        for (int idx = 1; idx < args.program_argc; idx++)
             printf(" %s", args.program_argv[idx]);
         printf("'\n");
         printf("[Child] =============\n");
@@ -150,18 +150,18 @@ int main(int argc, char **argv)
         nbytes = read(STDIN_FILENO, &buf, PIPE_BUF);
         if (nbytes > 0) {
             write(fd_child_stdin, buf, (size_t)nbytes);
-            //analyzer.capture_input(buf, (size_t)nbytes);
-            buf[nbytes+1] = '\0';
-            fprintf(out_file, "[IN] %s\n", buf);
+            //buf[nbytes+1] = '\0';
+            //fprintf(out_file, "[IN] %s\n", buf);
+            analyzer.capture_input(buf, (size_t)nbytes);
         }
 #endif
         nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
         if (nbytes > 0)
         {
             write(STDOUT_FILENO, buf, (size_t)nbytes);
-            //analyzer.capture_output(buf, (size_t)nbytes);
-            buf[nbytes+1] = '\0';
-            fprintf(out_file, "[OUT] %s\n", buf);
+            analyzer.capture_output(buf, (size_t)nbytes);
+            //buf[nbytes+1] = '\0';
+            //fprintf(out_file, "[OUT] %s\n", buf);
         }
     }
 
