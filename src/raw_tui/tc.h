@@ -3,36 +3,12 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "ANSI_Escape_Codes.h"
+
 
 struct cursor_pos_t {
 	uint16_t row;
 	uint16_t col;
-};
-
-
-enum class Mode {
-	NONE = 0,
-	BOLD = 1,
-	DIM = 2,
-	ITALIC = 3,
-	UNDERLINE = 4,
-	BLINKING = 5,
-	INVERSE = 7,
-	HIDDEN = 8,
-	STRIKETHROUGH = 9
-};
-
-
-enum class Color {
-	BLACK = 0,
-	RED = 1,
-	GREEN = 2,
-	YELLOW = 3,
-	BLUE = 4,
-	MAGENTA = 5,
-	CYAN = 6,
-	WHITE = 7,
-	DEFAULT = 8
 };
 
 

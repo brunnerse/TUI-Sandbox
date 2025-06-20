@@ -50,7 +50,32 @@
 #define ESC_ERASE_ENTIRE_LINE                   CODE_ESC"[2K"
 
 // Color / Graphics Mode
-// TODO define color / mode offsets here aswell?
+enum class Mode {
+	NONE = 0,
+	BOLD = 1,
+	DIM = 2,
+	ITALIC = 3,
+	UNDERLINE = 4,
+	BLINKING = 5,
+	INVERSE = 7,
+	HIDDEN = 8,
+	STRIKETHROUGH = 9
+};
+
+
+enum class Color {
+	BLACK = 0,
+	RED = 1,
+	GREEN = 2,
+	YELLOW = 3,
+	BLUE = 4,
+	MAGENTA = 5,
+	CYAN = 6,
+	WHITE = 7,
+	DEFAULT = 8
+};
+
+
 
 #define ESC_MODE_COLOR_FG_OFFSET 30
 #define ESC_MODE_COLOR_BG_OFFSET 40
