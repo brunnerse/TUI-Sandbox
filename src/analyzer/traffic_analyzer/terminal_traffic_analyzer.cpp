@@ -78,103 +78,23 @@ void TerminalTrafficAnalyzer::init_pre_suffixes()
     }
 }
 
-void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size) 
+
+
+void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, const std::string& suffix)
 {
-    static bool in_esc_expression = false;
-    static size_t esc_expression_pos;
+    bool in_esc_expression = !buffer.empty();
 
     bool append_linefeed = false;
 
-    // Print newline first if some time has passed
+    // If there have been no new capture for some time: Output a linefeed
     uint32_t current_ms = timestamp_ms();
     if (current_ms - last_print_time_ms > OUTPUT_LF_AFTER_MS)
     {
-        fwrite(CODE_LF, sizeof(CODE_LF), 1, out_file);
-        last_print_time_ms = current_ms;
+        fputc(LF, out_file);
     }
+    last_print_time_ms = current_ms;
 
-    for (unsigned long i = 0; i < size; i++) 
-    {
-        char c = data[i];
-
-        const char *token = "";
-        const char *description = "";
-
-        if (parse_esc_code(c, &token, &description)) {
-            if (c == ESC)
-            {
-                input_buffer += expression_prefix;
-                in_esc_expression = true;
-                esc_expression_pos = input_buffer.size(); 
-            }
-            else 
-            {
-                input_buffer += esc_code_prefix;
-                if (token[0] == '?') {
-                    // Escape expression unknown; Add hex value to buffer
-                    char s[10];
-                    snprintf(s, sizeof(s), "\\x%02x", c);
-                    input_buffer.append(s);
-                } else {
-                    input_buffer.append(token);
-                    if (PRINT_ESC_CODE_DESCRIPTIONS)
-                    {
-                        input_buffer += description_prefix + description + description_suffix;
-                    }
-                }
-                input_buffer += esc_code_suffix;
-
-                if (c == LF)
-                {
-                    append_linefeed = true; 
-                }
-            }
-        } else {
-            input_buffer.push_back(c);
-
-            // Check if currently in an escape expression and the expression just ended
-            if (in_esc_expression && isalpha(c))
-            {
-                in_esc_expression = false;
-
-
-                if (PRINT_ESC_CODE_DESCRIPTIONS)
-                {
-                    char expression_desc[20];
-                    parse_expression(input_buffer.substr(esc_expression_pos).c_str(), 
-                        input_buffer.size() - esc_expression_pos, expression_desc, sizeof(expression_desc));
-                    input_buffer += description_prefix + expression_desc + description_suffix;
-                }
-                input_buffer += expression_suffix; 
-            }
-        }
-    }
-
-    if (!input_buffer.empty())
-    {
-        fprintf(out_file, "%s%s%s%s", 
-            input_prefix.c_str(), input_buffer.c_str(), input_suffix.c_str(),
-            append_linefeed ? CODE_LF : "");
-        input_buffer.clear();
-    }
-}
-
-
-void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size) 
-{
-    static bool in_esc_expression = false;
-    static size_t esc_expression_pos;
-
-    bool append_linefeed = false;
-
-    uint32_t current_ms = timestamp_ms();
-    if (current_ms - last_print_time_ms > OUTPUT_LF_AFTER_MS)
-    {
-        fwrite(CODE_LF, sizeof(CODE_LF), 1, out_file);
-        last_print_time_ms = current_ms;
-    }
-
-    fwrite(output_prefix.c_str(), output_prefix.size(), 1, out_file);
+    fwrite(prefix.c_str(), prefix.size(), 1, out_file);
 
     unsigned long data_idx = 0;
 
@@ -193,7 +113,6 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
             {
                 output_buffer += expression_prefix;
                 in_esc_expression = true;
-                esc_expression_pos = output_buffer.size(); 
             }
             else 
             {
@@ -231,6 +150,7 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
                     if (PRINT_EXPRESSION_DESCRIPTIONS)
                     {
                         char expression_desc[20];
+                        size_t esc_expression_pos = output_buffer.find_last_of(ESC);
                         parse_expression(output_buffer.substr(esc_expression_pos).c_str(), 
                             input_buffer.size() - esc_expression_pos,
                             expression_desc, sizeof(expression_desc));
@@ -254,12 +174,22 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
     // Write all remaining data if not currently writing to output_buffer
     if (!in_esc_expression) {
         fwrite(data + data_idx, size - data_idx, 1, out_file);
+        fwrite(suffix.c_str(), suffix.size(), 1, out_file);
         if (append_linefeed)
             fputc(LF, out_file);
+
     }
     
+}
 
-    fwrite(output_suffix.c_str(), output_suffix.size(), 1, out_file);
+void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size) 
+{
+    this->capture(data, size, input_buffer, input_prefix, input_suffix);
+}
+
+void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size) 
+{
+    this->capture(data, size, output_buffer, output_prefix, output_suffix);
 }
 
 void TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, char* out_description, size_t out_length) 

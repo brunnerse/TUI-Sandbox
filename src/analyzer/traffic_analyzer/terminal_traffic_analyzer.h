@@ -35,10 +35,10 @@ private:
 
 	FILE *out_file;
 
-	const uint32_t OUTPUT_LF_AFTER_MS = 500; 
-	const bool PRINT_COLORS_ONLY = false;
 	const bool USE_COLORS; 
-	const bool PRINT_ESC_CODE_DESCRIPTIONS = false;
+	const uint32_t OUTPUT_LF_AFTER_MS = 500; 
+	const bool PRINT_COLORS_ONLY = true;
+	const bool PRINT_ESC_CODE_DESCRIPTIONS = true;
 	const bool PRINT_EXPRESSION_DESCRIPTIONS = true;
 
     uint32_t last_print_time_ms = 0;
@@ -50,12 +50,12 @@ private:
 
 	State state;
 
-
 	std::string input_buffer;
 	std::string output_buffer;
 
 	void init_pre_suffixes();
 
+	void capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, const std::string& suffix);
 
 	void parse_expression(const char* expr, size_t size, char* out_description, size_t out_length); 
 
