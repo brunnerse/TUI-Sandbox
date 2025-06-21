@@ -78,17 +78,20 @@ int main(int argc, char **argv)
     assert(0 == pipe2(pipe_fd_child_stdin, O_NONBLOCK));
 #endif
 
+    pid_t parent_pid = getpid();
     pid_t child_pid = fork();
 
     if (child_pid == 0)
     {
         // Inside child process
-        printf("[Child] =============\n");
-        printf("[Child] Executing '%s",args.program);
-        for (int idx = 1; idx < args.program_argc; idx++)
-            printf(" %s", args.program_argv[idx]);
-        printf("'\n");
-        printf("[Child] =============\n");
+        printf("\nPress key to start...");
+        while (getchar() == EOF)
+            ; 
+        printf("\r\e[2K\n");
+       
+        // Signal parent that child will start the program now
+        kill(parent_pid, SIGINT);
+
 
         // Child stdout: Close pipe read direction, dup pipe write direction to stdout
         close(pipe_fd_child_stdout[0]);
@@ -99,6 +102,7 @@ int main(int argc, char **argv)
         close(pipe_fd_child_stdin[1]);
         dup2(pipe_fd_child_stdin[0], STDIN_FILENO);
 #endif
+        
     
         execvp(args.program_argv[0], (char* const*)args.program_argv); 
 
@@ -117,7 +121,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    printf("Child has PID %lu\n", (unsigned long)child_pid);
+    //printf("Child has PID %lu\n", (unsigned long)child_pid);
 
     // Read child stdout: Close pipe write direction, use pipe read direction
     close(pipe_fd_child_stdout[1]);
@@ -131,6 +135,12 @@ int main(int argc, char **argv)
 
     TerminalTrafficAnalyzer analyzer(out_file);
 
+
+    // Wait until child sends signal that it started program 
+    while (!sig_int_received)
+        sleep(100);
+    
+    // Continuously read 
     while (!sig_child_received)
     {
         char buf[PIPE_BUF];
@@ -147,8 +157,6 @@ int main(int argc, char **argv)
         {
             write(STDOUT_FILENO, buf, (size_t)nbytes);
             analyzer.capture_output(buf, (size_t)nbytes);
-            //buf[nbytes+1] = '\0';
-            //fprintf(out_file, "[OUT] %s\n", buf);
         }
     }
 
