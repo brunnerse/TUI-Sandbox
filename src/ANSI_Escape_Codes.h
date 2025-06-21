@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 // ASCII codes
 #define ESC '\x1b'
 #define DEL '\x7f'
@@ -63,6 +65,18 @@ enum class Mode {
 	RESET_BOLD = 22 // Listed extra since it's a special case
 };
 
+const std::map<Mode, const char*> Mode_Str {
+	{Mode::NONE, "Reset"},
+	{Mode::BOLD, "Bold"},
+	{Mode::DIM, "Dim"},
+	{Mode::ITALIC, "Italic"},
+	{Mode::UNDERLINE, "Underline"},
+	{Mode::BLINKING, "Blinking"},
+	{Mode::INVERSE, "Inverse"},
+	{Mode::HIDDEN, "Hidden"},
+	{Mode::STRIKETHROUGH, "Strikethrough"},
+ };
+
 
 enum class Color {
 	BLACK = 0,
@@ -75,6 +89,20 @@ enum class Color {
 	WHITE = 7,
 	DEFAULT = 9
 };
+
+const std::map<Color, const char*> Color_Str {
+	{Color::BLACK, "Black"},
+	{Color::RED, "Red"},
+	{Color::GREEN, "Green"},
+	{Color::YELLOW, "Yellow"},
+	{Color::BLUE, "Blue"},
+	{Color::MAGENTA, "Magenta"},
+	{Color::CYAN, "Cyan"},
+	{Color::WHITE, "White"},
+	{Color::DEFAULT, "Default"},
+ };
+
+
 
 
 

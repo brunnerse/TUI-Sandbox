@@ -36,8 +36,10 @@ private:
 	FILE *out_file;
 
 	const bool USE_COLORS; 
-	const uint32_t OUTPUT_LF_AFTER_MS = 500; 
-	const bool PRINT_COLORS_ONLY = true;
+	const uint32_t OUTPUT_LF_AFTER_MS = 250; 
+
+	// TODO let user configure
+	const bool PRINT_COLORS_ONLY = false;
 	const bool PRINT_ESC_CODE_DESCRIPTIONS = true;
 	const bool PRINT_EXPRESSION_DESCRIPTIONS = true;
 
@@ -57,7 +59,7 @@ private:
 
 	void capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, const std::string& suffix);
 
-	void parse_expression(const char* expr, size_t size, char* out_description, size_t out_length); 
+	bool parse_expression(const char* expr, size_t size, char* out_description, size_t out_length); 
 
 	static bool parse_esc_code(char c, const char **out_token, const char **out_description);
 };

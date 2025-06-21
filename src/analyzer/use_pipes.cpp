@@ -20,7 +20,9 @@
 
 #include "tcdebug_arg_parse.h"
 
-#define INTERCEPT_INPUT 1
+#define INTERCEPT_INPUT true
+#define NUM_OUTPUT_FILES 1
+
 
 // Uses tee() to intercept process input and output
 // https://www.man7.org/linux/man-pages/man2/tee.2.html
@@ -43,7 +45,7 @@ int main(int argc, char **argv)
 {
 
     tcdebug_args args;
-    if (!tcdebug_parse_args(argc, argv, false, true, &args))
+    if (!tcdebug_parse_args(argc, argv, NUM_OUTPUT_FILES != 1, true, &args))
         return 1;
 
     if (args.out_files[0].empty())
@@ -59,12 +61,22 @@ int main(int argc, char **argv)
     terminal_cfg_store();
     terminal_cfg_set(false, false, true);
 
-    FILE *out_file = nullptr;
-    out_file   = fopen(args.out_files[0].c_str(), "w");
+    FILE *out_files[NUM_OUTPUT_FILES];
+    unsigned num_output_files = 0;
+    for (unsigned i = 0; i < NUM_OUTPUT_FILES; i++)
+    {
+        if (args.out_files[i].empty())
+            break;
 
-    // Disable output buffer for /dev/xx files 
-    if (args.out_files[0].find_first_of("/dev/") == 0)
-        setbuf(out_file, NULL); 
+        out_files[i] = fopen(args.out_files[i].c_str(), "w");
+        assert(out_files[i] != nullptr);
+        num_output_files++;
+
+        // Disable output buffer for /dev/xx files 
+        if (args.out_files[i].find_first_of("/dev/") == 0)
+            setbuf(out_files[i], NULL); 
+    }
+
     // Disable stdout buffer
     setbuf(stdout, NULL);
 
@@ -75,7 +87,7 @@ int main(int argc, char **argv)
 
 #if INTERCEPT_INPUT
     int pipe_fd_child_stdin[2];
-    assert(0 == pipe2(pipe_fd_child_stdin, O_NONBLOCK));
+    assert(0 == pipe2(pipe_fd_child_stdin, 0));
 #endif
 
     pid_t parent_pid = getpid();
@@ -156,6 +168,7 @@ int main(int argc, char **argv)
         if (nbytes > 0)
         {
             write(STDOUT_FILENO, buf, (size_t)nbytes);
+            // TODO make step by step; If analyzer catches ESC expression, delay so user can see effect
             analyzer.capture_output(buf, (size_t)nbytes);
         }
     }
@@ -170,7 +183,8 @@ int main(int argc, char **argv)
     printf("==================\n");
 
 
-    fclose(out_file); 
+    for (unsigned i = 0; i < num_output_files; i++)
+        fclose(out_files[i]); 
 
     return 0;
 }
