@@ -36,9 +36,9 @@ private:
 	FILE *out_file;
 
 	const uint32_t OUTPUT_LF_AFTER_MS = 500; 
-	const bool PRINT_COLORS_ONLY = true;
+	const bool PRINT_COLORS_ONLY = false;
 	const bool USE_COLORS; 
-	const bool PRINT_ESC_CODE_DESCRIPTIONS = true;
+	const bool PRINT_ESC_CODE_DESCRIPTIONS = false;
 	const bool PRINT_EXPRESSION_DESCRIPTIONS = true;
 
     uint32_t last_print_time_ms = 0;

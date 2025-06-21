@@ -165,6 +165,8 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
     static bool in_esc_expression = false;
     static size_t esc_expression_pos;
 
+    bool append_linefeed = false;
+
     uint32_t current_ms = timestamp_ms();
     if (current_ms - last_print_time_ms > OUTPUT_LF_AFTER_MS)
     {
@@ -189,30 +191,31 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
 
             if (c == ESC)
             {
-        //        output_buffer += expression_prefix;
+                output_buffer += expression_prefix;
                 in_esc_expression = true;
                 esc_expression_pos = output_buffer.size(); 
             }
             else 
             {
-         //       output_buffer += esc_code_prefix;
+                output_buffer += esc_code_prefix;
                 if (token[0] == '?') {
                     // Escape expression unknown; Add hex value to buffer
                     char s[10];
                     snprintf(s, sizeof(s), "\\x%02x", c);
                     output_buffer.append(s);
                 } else {
-                    output_buffer += token;
-                    output_buffer += " (";
-                    output_buffer += description;
-                    output_buffer += ")";
-                }
-         //       output_buffer += esc_code_suffix;
 
-                // TODO newline also in other situations, e.g. after some time?
+                    output_buffer += token;
+                    if (PRINT_ESC_CODE_DESCRIPTIONS)
+                    {
+                        output_buffer += description_prefix + description + description_suffix;
+                    }
+                }
+                output_buffer += esc_code_suffix;
+
                 if (c == LF)
                 {
-                    output_buffer.push_back(LF);
+                    append_linefeed = true; 
                 }
             }
         } else {
@@ -225,30 +228,36 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
                 {
                     in_esc_expression = false;
 
-                    char expression_desc[20];
-                    parse_expression(output_buffer.substr(esc_expression_pos).c_str(), 
-                        input_buffer.size() - esc_expression_pos,
-                        expression_desc, sizeof(expression_desc));
-                   
-                    output_buffer.append(" (");
-                    output_buffer.append(expression_desc);
-                    output_buffer.append(")");
-         //           output_buffer.append(expression_suffix);
+                    if (PRINT_EXPRESSION_DESCRIPTIONS)
+                    {
+                        char expression_desc[20];
+                        parse_expression(output_buffer.substr(esc_expression_pos).c_str(), 
+                            input_buffer.size() - esc_expression_pos,
+                            expression_desc, sizeof(expression_desc));
+                    
+                        output_buffer += description_prefix + expression_desc + description_suffix;
+                    }
+
+                    output_buffer.append(expression_suffix);
                 }
             }
         }
 
         if (!in_esc_expression && output_buffer.size() > 0)
         {
-            fprintf(out_file, "%s", output_buffer.c_str());
+            fwrite(output_buffer.c_str(), output_buffer.size(), 1, out_file);
             output_buffer.clear();
             data_idx = i + 1;
         }
     }
     
     // Write all remaining data if not currently writing to output_buffer
-    if (!in_esc_expression)
+    if (!in_esc_expression) {
         fwrite(data + data_idx, size - data_idx, 1, out_file);
+        if (append_linefeed)
+            fputc(LF, out_file);
+    }
+    
 
     fwrite(output_suffix.c_str(), output_suffix.size(), 1, out_file);
 }
