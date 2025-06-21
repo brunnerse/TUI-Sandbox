@@ -59,7 +59,8 @@ enum class Mode {
 	BLINKING = 5,
 	INVERSE = 7,
 	HIDDEN = 8,
-	STRIKETHROUGH = 9
+	STRIKETHROUGH = 9,
+	RESET_BOLD = 22 // Listed extra since it's a special case
 };
 
 
@@ -72,7 +73,7 @@ enum class Color {
 	MAGENTA = 5,
 	CYAN = 6,
 	WHITE = 7,
-	DEFAULT = 8
+	DEFAULT = 9
 };
 
 
@@ -82,7 +83,7 @@ enum class Color {
 #define ESC_MODE_COLOR_FG_BRIGHT_OFFSET 90
 #define ESC_MODE_COLOR_BG_BRIGHT_OFFSET 100
 
-#define ESC_MODE_RESET_OFFSET 21
+#define ESC_MODE_RESET_OFFSET 20
 
 #define ESC_MODE                CODE_ESC"[%um"
 #define ESC_MODE_COLOR          CODE_ESC"[%u;%um"

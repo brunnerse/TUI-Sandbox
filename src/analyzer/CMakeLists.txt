@@ -16,6 +16,13 @@ foreach (file IN LISTS analyzer_files)
 	)
 endforeach()
 
+set_property(TARGET use_pipes 
+	PROPERTY RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+set_property(TARGET use_pipes 
+	PROPERTY RUNTIME_OUTPUT_NAME "analyzer"
+)
+
 
 
 add_library(TrafficAnalyzer
