@@ -57,8 +57,8 @@ int main(int argc, char **argv)
     int pipe_fd_program_output[2];
     assert(0 == pipe2(pipe_fd_program_output, O_NONBLOCK));
 
-    pid_t own_pid = getpid();
-    printf("Process has PID %lu\n", (unsigned long)own_pid);
+    pid_t parent_pid = getpid();
+    printf("Process has PID %lu\n", (unsigned long)parent_pid);
 
     // Both pipes read: Close write direction, use read direction
     close(pipe_fd_program_input[1]);
@@ -69,8 +69,8 @@ int main(int argc, char **argv)
 
 
     pid_t child_pid = fork();
-    if (child_pid != 0) {
-        printf("[Child] Child has PID %lu\n", (unsigned long)child_pid);
+    if (child_pid == 0) {
+        printf("[Child] Child has PID %lu\n", (unsigned long)getpid());
         printf("%u %s\n", args.program_argc, args.program_argv[0]);
         std::string program_call = args.program_argv[0]; 
         for (int i = 1; i < args.program_argc; i++) {
@@ -82,9 +82,9 @@ int main(int argc, char **argv)
 
         char cmd[200];
         int retval = snprintf(cmd, sizeof(cmd), "tee /proc/%u/fd/%u | %s | tee /proc/%u/fd/%u\n",
-            own_pid, fd_program_input, 
+            parent_pid, fd_program_input, 
             program_call.c_str(),
-            own_pid, fd_program_output);
+            parent_pid, fd_program_output);
         assert(retval > 0 && retval < (int)sizeof(cmd)); 
 
         printf("[Child] Executing %s\n", cmd);

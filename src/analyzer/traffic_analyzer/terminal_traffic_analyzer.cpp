@@ -20,49 +20,70 @@ static uint32_t timestamp_ms()
 void TerminalTrafficAnalyzer::init_pre_suffixes()
 {
     
-    if (!this->PRINT_COLORS_ONLY) {
+    if (! (this->USE_COLORS && this->PRINT_COLORS_ONLY) ) {
         input_prefix = "{IN '";
         input_suffix = "'}";
+	    expression_prefix = "| ";
+        expression_suffix = " |";
     }
 
+    description_prefix = " (";
+    description_suffix = ")";
 	esc_code_prefix = "<"; 
     esc_code_suffix = ">";
-	expression_prefix = "[";
-    expression_suffix = "]";
 
 
+
+    char str[20];
     if (this->USE_COLORS)
     {
-        char str[20];
 
         snprintf(str, sizeof(str), ESC_MODE, 
             ESC_MODE_COLOR_FG_OFFSET + (uint8_t)Color::GREEN);
         input_prefix.insert(0,  str);
         snprintf(str, sizeof(str), ESC_MODE, (uint8_t)Mode::NONE);
         input_suffix.append(str);
+
         snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::BOLD, 
             ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::BLACK);
         esc_code_prefix.insert(0,  str);
-        snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::NONE, 
+        esc_code_suffix.insert(0, str);
+        snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::RESET_BOLD, 
             ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::DEFAULT);
         esc_code_suffix.append(str);
-        snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::ITALIC, 
-            ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::MAGENTA);
-        expression_prefix.insert(0, str);
-        snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::NONE, 
+
+        snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::BOLD, 
+            ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::BLACK);
+        expression_prefix.insert(0,  str);
+        expression_suffix.insert(0, str);
+        snprintf(str, sizeof(str), ESC_MODE_COLOR "<ESC>", (uint8_t)Mode::BOLD, 
+            ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::BLACK);
+        expression_prefix.append(str);
+
+        snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::RESET_BOLD, 
             ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::DEFAULT);
         expression_suffix.append(str);
-    } 
-    expression_prefix.append(esc_code_prefix);
-    expression_prefix.append("ESC");
-    expression_prefix.append(esc_code_suffix);
 
+
+        snprintf(str, sizeof(str), ESC_MODE_COLOR_FG_BG, (uint8_t)Mode::DIM, (uint8_t)Mode::RESET_BOLD,
+            ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::BLACK);
+        description_prefix.insert(0,  str);
+        snprintf(str, sizeof(str), ESC_MODE_COLOR, ESC_MODE_RESET_OFFSET + (uint8_t)Mode::DIM, 
+            ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::DEFAULT);
+        description_suffix.append(str);
+    } 
+    else 
+    {
+        expression_prefix += esc_code_prefix + "ESC" + esc_code_suffix;
+    }
 }
 
 void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size) 
 {
     static bool in_esc_expression = false;
     static size_t esc_expression_pos;
+
+    bool append_linefeed = false;
 
     // Print newline first if some time has passed
     uint32_t current_ms = timestamp_ms();
@@ -96,16 +117,16 @@ void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size)
                     input_buffer.append(s);
                 } else {
                     input_buffer.append(token);
-                    output_buffer.append(" ("); 
-                    output_buffer.append(description);
-                    output_buffer.append(" )"); 
+                    if (PRINT_ESC_CODE_DESCRIPTIONS)
+                    {
+                        input_buffer += description_prefix + description + description_suffix;
+                    }
                 }
                 input_buffer += esc_code_suffix;
-                input_buffer += input_prefix;
 
                 if (c == LF)
                 {
-                    input_buffer.push_back(LF);
+                    append_linefeed = true; 
                 }
             }
         } else {
@@ -116,22 +137,24 @@ void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size)
             {
                 in_esc_expression = false;
 
-                char expression_desc[20];
-                parse_expression(input_buffer.substr(esc_expression_pos).c_str(), 
-                    input_buffer.size() - esc_expression_pos,
-                    expression_desc, sizeof(expression_desc));
-                input_buffer.append(" ("); 
-                input_buffer.append(expression_desc);
-                input_buffer.append(" )"); 
-                input_buffer.append(expression_suffix);
+
+                if (PRINT_ESC_CODE_DESCRIPTIONS)
+                {
+                    char expression_desc[20];
+                    parse_expression(input_buffer.substr(esc_expression_pos).c_str(), 
+                        input_buffer.size() - esc_expression_pos, expression_desc, sizeof(expression_desc));
+                    input_buffer += description_prefix + expression_desc + description_suffix;
+                }
+                input_buffer += expression_suffix; 
             }
         }
     }
 
     if (!input_buffer.empty())
     {
-        fprintf(out_file, "%s%s%s", 
-            input_prefix.c_str(), input_buffer.c_str(), input_suffix.c_str());
+        fprintf(out_file, "%s%s%s%s", 
+            input_prefix.c_str(), input_buffer.c_str(), input_suffix.c_str(),
+            append_linefeed ? CODE_LF : "");
         input_buffer.clear();
     }
 }
@@ -149,6 +172,8 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
         last_print_time_ms = current_ms;
     }
 
+    fwrite(output_prefix.c_str(), output_prefix.size(), 1, out_file);
+
     unsigned long data_idx = 0;
 
     for (unsigned long i = 0; i < size; i++) 
@@ -164,25 +189,25 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
 
             if (c == ESC)
             {
-                output_buffer += expression_prefix;
+        //        output_buffer += expression_prefix;
                 in_esc_expression = true;
                 esc_expression_pos = output_buffer.size(); 
             }
             else 
             {
-                output_buffer += esc_code_prefix;
+         //       output_buffer += esc_code_prefix;
                 if (token[0] == '?') {
                     // Escape expression unknown; Add hex value to buffer
                     char s[10];
                     snprintf(s, sizeof(s), "\\x%02x", c);
                     output_buffer.append(s);
                 } else {
-                    output_buffer.append(token);
-                    output_buffer.append(" ("); 
-                    output_buffer.append(description);
-                    output_buffer.append(" )"); 
+                    output_buffer += token;
+                    output_buffer += " (";
+                    output_buffer += description;
+                    output_buffer += ")";
                 }
-                output_buffer += esc_code_suffix;
+         //       output_buffer += esc_code_suffix;
 
                 // TODO newline also in other situations, e.g. after some time?
                 if (c == LF)
@@ -204,10 +229,11 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
                     parse_expression(output_buffer.substr(esc_expression_pos).c_str(), 
                         input_buffer.size() - esc_expression_pos,
                         expression_desc, sizeof(expression_desc));
+                   
                     output_buffer.append(" (");
                     output_buffer.append(expression_desc);
                     output_buffer.append(")");
-                    output_buffer.append(expression_suffix);
+         //           output_buffer.append(expression_suffix);
                 }
             }
         }
@@ -223,6 +249,8 @@ void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size)
     // Write all remaining data if not currently writing to output_buffer
     if (!in_esc_expression)
         fwrite(data + data_idx, size - data_idx, 1, out_file);
+
+    fwrite(output_suffix.c_str(), output_suffix.size(), 1, out_file);
 }
 
 void TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, char* out_description, size_t out_length) 

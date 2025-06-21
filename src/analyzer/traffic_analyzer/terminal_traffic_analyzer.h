@@ -27,16 +27,19 @@ private:
 
 	std::string input_prefix, input_suffix;
 	std::string output_prefix, output_suffix;
-	std::string expression_prefix, expression_suffix;
 	std::string esc_code_prefix, esc_code_suffix;
+	std::string expression_prefix, expression_suffix;
+	std::string description_prefix, description_suffix;
 
 
 
 	FILE *out_file;
 
 	const uint32_t OUTPUT_LF_AFTER_MS = 500; 
-	const bool PRINT_COLORS_ONLY = false;
+	const bool PRINT_COLORS_ONLY = true;
 	const bool USE_COLORS; 
+	const bool PRINT_ESC_CODE_DESCRIPTIONS = true;
+	const bool PRINT_EXPRESSION_DESCRIPTIONS = true;
 
     uint32_t last_print_time_ms = 0;
 
