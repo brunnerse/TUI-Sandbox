@@ -239,7 +239,7 @@ bool Basic_App::show_exit_screen()
 
     // Mark for exiting
     if (comp_exit->get_option() == 0) {
-        this->running = false;
+        this->mark_for_exit();
     } else {
         this->status = Status::IDLE;
         this->repaint_all();

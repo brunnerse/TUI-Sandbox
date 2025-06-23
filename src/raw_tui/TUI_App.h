@@ -64,6 +64,8 @@ protected:
 
 	static rectangle_t* get_bounds(TUI_Component* comp) {return &comp->bounds;} 
 
+	void mark_for_exit() {this->running = false;}
+
 private:
 	// CFG-Settings for terminal init
 	const bool cfg_use_alt_screen;
