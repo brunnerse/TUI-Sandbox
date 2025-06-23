@@ -82,7 +82,8 @@ void TerminalTrafficAnalyzer::init_pre_suffixes()
 
 
 
-void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, const std::string& suffix)
+void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, 
+        const std::string& suffix, bool single_escapes_possible)
 {
     bool in_esc_expression = !buffer.empty();
 
@@ -106,12 +107,46 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
 
         const char *token = "";
         const char *description = "";
-        if (parse_esc_code(c, &token, &description)) {
 
+        bool is_esc_code = parse_esc_code(c, &token, &description);
+
+        if (in_esc_expression)
+        {
+            // Check if expression already ended one sign before
+            bool expression_ended = isspace(c) || is_esc_code;
+            if (expression_ended) // If expression already ended: read the character again in the next iteration
+                i--;
+            else // Else: Character still part of escape expression 
+                buffer.push_back(c);
+
+            // If expression just ended ; TODO this does not work for special keys like F1, PGUP,...
+            if (expression_ended || (isalpha(c) && c != 'O'))
+            {
+                in_esc_expression = false;
+
+                if (PRINT_EXPRESSION_DESCRIPTIONS)
+                {
+                    char expression_desc[100];
+                    size_t esc_expression_pos = expression_prefix.size();
+                    bool linefeed_after = 
+                        parse_expression(buffer.substr(esc_expression_pos).c_str(), 
+                            buffer.size() - esc_expression_pos,
+                            expression_desc, sizeof(expression_desc));
+
+                    append_linefeed |= linefeed_after;
+                
+                    buffer += description_prefix + expression_desc + description_suffix;
+                }
+
+                buffer.append(expression_suffix);
+            }
+        }
+        else if (is_esc_code)
+        {
             // Write all data so far
             fwrite(data + data_idx, i - data_idx, 1, out_file);
 
-            if (c == ESC)
+            if (c == ESC && !(single_escapes_possible && i == size-1))
             {
                 buffer += expression_prefix;
                 in_esc_expression = true;
@@ -134,37 +169,9 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
                 }
                 buffer += esc_code_suffix;
 
-                if (c == LF)
+                if (c == LF || c == CR || c == FF || c == VT)
                 {
                     append_linefeed = true; 
-                }
-            }
-        } else {
-            // If currently in an escape expression: Push to buffer and the expression just ended
-            if (in_esc_expression)
-            {
-                buffer.push_back(c);
-                // If expression just ended ; TODO this does not work for special keys like F1, PGUP,...
-                if (isalpha(c) && c != 'O')
-                {
-                    in_esc_expression = false;
-
-                    if (PRINT_EXPRESSION_DESCRIPTIONS)
-                    {
-                        char expression_desc[100];
-                        size_t esc_expression_pos = expression_prefix.size();
-                        bool linefeed_after = 
-                            parse_expression(buffer.substr(esc_expression_pos).c_str(), 
-                                buffer.size() - esc_expression_pos,
-                                expression_desc, sizeof(expression_desc));
-
-                        append_linefeed |= linefeed_after;
-                    
-                        buffer += description_prefix + expression_desc + description_suffix;
-
-                    }
-
-                    buffer.append(expression_suffix);
                 }
             }
         }
@@ -183,19 +190,18 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
         }
     }
     
-    // Write all remaining data if not currently writing to output_buffer
+    // Write all remaining data if not currently writing to buffer
     if (!in_esc_expression) {
         fwrite(data + data_idx, size - data_idx, 1, out_file);
     }
     fwrite(suffix.c_str(), suffix.size(), 1, out_file);
     if (append_linefeed)
         fputc(LF, out_file);
-    
 }
 
 void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size) 
 {
-    this->capture(data, size, input_buffer, input_prefix, input_suffix);
+    this->capture(data, size, input_buffer, input_prefix, input_suffix, true);
 }
 
 void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size) 
@@ -232,18 +238,16 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
 
 
     if (expr[0] != '[' && expr[0] != 'O') {
+        while (*expr != '\0')
+            fprintf(out_file, "%x\t", *(expr++));
         // TODO handle these kind of expressions specially, also in capture() method
         snprintf(out_description, out_length, "Unknown special expression");
         return true;
     }
 
-    const char *expr_nums = &expr[1];
 
-    bool private_mode = false;
-    if (expr[1] == '?') {
-        private_mode = true;
-        expr_nums = &expr[2];
-    } 
+    const char *expr_nums = &expr[ isalnum(expr[1]) ? 1 : 2];
+
 
     // parse any numbers in expression
 
@@ -270,10 +274,9 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
     }
 
 
-    if (private_mode)
+    if (expr[1] == '?') // Private mode expression
     {
         if (expr_numbers.empty()) {
-            fprintf(out_file, "Ill-formed expression!\n");
             return true;
         }
         switch(expr_numbers[0]) {
@@ -299,6 +302,12 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
                 snprintf(out_description, out_length, "Unknown private expression"); 
                 break;
         }
+        return true;
+    }
+    else if (expr[1] == '<')
+    {
+        // TODO more exact
+        snprintf(out_description, out_length, "Mouse input");
         return true;
     }
 

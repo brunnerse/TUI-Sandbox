@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     int fd_child_stdin = pipe_fd_child_stdin[1];
 #endif
 
-    TerminalTrafficAnalyzer analyzer(out_file);
+    TerminalTrafficAnalyzer analyzer(out_files[0]);
 
 
     // Wait until child sends signal that it started program 

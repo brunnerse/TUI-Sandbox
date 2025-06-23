@@ -57,7 +57,7 @@ private:
 
 	void init_pre_suffixes();
 
-	void capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, const std::string& suffix);
+	void capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, const std::string& suffix, bool single_escapes_possible = false);
 
 	bool parse_expression(const char* expr, size_t size, char* out_description, size_t out_length); 
 
