@@ -51,6 +51,7 @@ void tc_erase_all();
 void tc_erase_line();
 void tc_erase_before_cursor(bool line_only=false);
 void tc_erase_after_cursor(bool line_only=false);
+void tc_erase_characters(uint16_t n_chars = 1);
 
 
 void tc_cursor_set_invisible();
@@ -61,3 +62,6 @@ void tc_restore_screen();
 
 void tc_alt_screen_enter();
 void tc_alt_screen_exit();
+
+// Scroll viewport between top_line and bottom_line <lines> up;  if <lines> is negative, scroll down
+void tc_scroll_viewport(int16_t lines, uint16_t viewport_top_row, uint16_t viewport_bottom_row, uint16_t terminal_rows);

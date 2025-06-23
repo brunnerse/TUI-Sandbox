@@ -179,7 +179,7 @@ int main(int argc, char **argv)
     terminal_cfg_restore();
 
     printf("\n==================\n");
-    printf("Child process finished.\n");
+    printf("Program finished.\n");
     printf("==================\n");
 
 

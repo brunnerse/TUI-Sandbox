@@ -227,6 +227,9 @@ static const char *get_color_str(Color color)
     return elem_iter->second;
 }
 
+/* 
+*    @return whether to insert a newline after the expression
+*/
 bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, char* out_description, size_t out_length) 
 {
     // Print  
@@ -312,6 +315,7 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
     }
 
 
+    // Parse CSI (Control Sequence Introducer) sequences starting with "<ESC>["
     switch(type) {
         case 'm': {
             // Empty is equal to 0
@@ -320,26 +324,63 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
 
             int len = snprintf(out_description, out_length, "Mode:");
 
+            // Special cases
+            if (expr_numbers[0] == 38 || expr_numbers[0] == 48) {
+                if (expr_numbers[1] == 5) {
+                    if (expr_numbers.size() != 3)
+                        return false;
+                    snprintf(out_description, out_length, "Set %s color to 256-ID %u", 
+                        expr_numbers[0] == 38 ? "foreground" : "background", expr_numbers[2]);
+                    return false;
+                }
+                else if (expr_numbers[1] == 2) {
+                    if (expr_numbers.size() != 5)
+                        return false;
+                    snprintf(out_description, out_length, "Set %s color to RGB (%u, %u, %u)", 
+                        expr_numbers[0] == 38 ? "foreground" : "background", 
+                        expr_numbers[2], expr_numbers[3], expr_numbers[4]);
+                    return false;
+                }
+                else {
+                    snprintf(out_description, out_length, "Unknown mode coloring expression");
+                    return false;
+                }
+
+            }
+
+            bool first = true;
             for (int num : expr_numbers) {
+                if (!first)
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, ";");
+                else
+                    first = false;
+
                 if (num <= (int)Mode::STRIKETHROUGH) {
-                    len += snprintf(out_description+len, out_length-(uint32_t)len, " %s;", 
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, " %s", 
                         get_mode_str((Mode)num));
                 }
                 else if (num >= ESC_MODE_RESET_OFFSET && num <= ESC_MODE_RESET_OFFSET + (int)Mode::STRIKETHROUGH) {
-                    len += snprintf(out_description+len, out_length-(uint32_t)len, " reset %s;", 
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, " reset %s", 
                         get_mode_str((Mode)(num - ESC_MODE_RESET_OFFSET)));
                 }
                 else if (num >= ESC_MODE_COLOR_FG_OFFSET && num <= ESC_MODE_COLOR_FG_OFFSET+ (int)Color::DEFAULT) {
-                    len += snprintf(out_description+len, out_length-(uint32_t)len, " Color %s;", 
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, " Color %s", 
                         get_color_str((Color)(num - ESC_MODE_COLOR_FG_OFFSET)));
                 }
                 else if (num >= ESC_MODE_COLOR_BG_OFFSET && num <= ESC_MODE_COLOR_BG_OFFSET+ (int)Color::DEFAULT) {
-                    len += snprintf(out_description+len, out_length-(uint32_t)len, " Bg-Color %s;", 
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, " Bg-Color %s", 
                         get_color_str((Color)(num - ESC_MODE_COLOR_BG_OFFSET)));
                 }
-
+                else if (num >= ESC_MODE_COLOR_FG_BRIGHT_OFFSET && num <= ESC_MODE_COLOR_FG_BRIGHT_OFFSET+ (int)Color::DEFAULT) {
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, " Color Bright %s", 
+                        get_color_str((Color)(num - ESC_MODE_COLOR_FG_BRIGHT_OFFSET)));
+                }
+                else if (num >= ESC_MODE_COLOR_BG_BRIGHT_OFFSET && num <= ESC_MODE_COLOR_BG_BRIGHT_OFFSET+ (int)Color::DEFAULT) {
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, " Bg-Color Bright %s", 
+                        get_color_str((Color)(num - ESC_MODE_COLOR_BG_BRIGHT_OFFSET)));
+                }
                 else 
-                    len += snprintf(out_description+len, out_length-(uint32_t)len, "?;");
+                    len += snprintf(out_description+len, out_length-(uint32_t)len, "?");
             }
 
             return false;
@@ -369,6 +410,12 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
             else if (expr_numbers.size() > 0 && expr_numbers[0] == 2)
                 text = "from cursor to beginning of";
             snprintf(out_description, out_length, "Erase %s line", text);
+            break;
+        }
+        case 'X': {
+            // Erase in line
+            snprintf(out_description, out_length, "Erase %u characters", 
+                expr_numbers.empty() ? 1 : expr_numbers[0]);
             break;
         }
         case 'D':
@@ -407,6 +454,21 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
                 return false;
             }
             break;
+        case 'L':
+            if (expr_numbers.size() == 0)
+                expr_numbers.push_back(1); // Default value
+            snprintf(out_description, out_length, "Insert %u blank lines at active row", expr_numbers[0]);
+            return true;
+        case 'M':
+            if (expr_numbers.size() == 0)
+                expr_numbers.push_back(1); // Default value
+            snprintf(out_description, out_length, "Delete %u blank lines at active row", expr_numbers[0]);
+            return true;
+        case 'r':
+            if (expr_numbers.size() != 2)
+                return true;
+            snprintf(out_description, out_length, "Set viewport margins to [top=%u, bottom=%u]", expr_numbers[0], expr_numbers[1]);
+            return true;
         default:
             snprintf(out_description, out_length, "Unknown expression");
             break;

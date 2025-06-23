@@ -50,6 +50,12 @@
 #define ESC_ERASE_FROM_CURSOR_TO_LINE_END       CODE_ESC"[0K"
 #define ESC_ERASE_FROM_CURSOR_TO_LINE_BEGIN     CODE_ESC"[1K"
 #define ESC_ERASE_ENTIRE_LINE                   CODE_ESC"[2K"
+#define ESC_ERASE_CHARACTERS                   CODE_ESC"[%uX"
+
+#define ESC_INSERT_LINES 						CODE_ESC"[%uL"
+#define ESC_REMOVE_LINES 						CODE_ESC"[%uM"
+
+#define ESC_SET_VIEWPORT_TOP_BOTTOM_MARGIN 		CODE_ESC"[%u;%ur"
 
 // Color / Graphics Mode
 enum class Mode {
@@ -132,3 +138,6 @@ const std::map<Color, const char*> Color_Str {
 
 #define ESC_ALT_BUFFER_EN       CODE_ESC"[?1049h"
 #define ESC_ALT_BUFFER_DIS      CODE_ESC"[?1049l"
+
+
+

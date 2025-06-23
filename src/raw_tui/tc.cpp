@@ -136,6 +136,11 @@ void tc_erase_after_cursor(bool line_only) {
     printf(line_only ? ESC_ERASE_FROM_CURSOR_TO_LINE_END : ESC_ERASE_FROM_CURSOR_TO_SCREEN_END);
 }
 
+void tc_erase_characters(uint16_t n_chars)
+{
+    printf(ESC_ERASE_CHARACTERS, n_chars);
+}
+
 void tc_cursor_set_invisible(){
     printf(ESC_CURSOR_INVISIBLE_EN);
 }
@@ -159,4 +164,24 @@ void tc_alt_screen_enter() {
 
 void tc_alt_screen_exit(){
     printf(ESC_ALT_BUFFER_DIS);
+}
+
+
+// Scroll viewport between top_line and bottom_line <lines> up;  if <lines> is negative, scroll down
+void tc_scroll_viewport(int16_t lines, uint16_t viewport_top_row, uint16_t viewport_bottom_row, uint16_t terminal_rows)
+{
+    if (lines >= 0) 
+    {
+        printf(
+            ESC_SET_VIEWPORT_TOP_BOTTOM_MARGIN ESC_CURSOR_SET_POS ESC_INSERT_LINES ESC_SET_VIEWPORT_TOP_BOTTOM_MARGIN,
+            viewport_top_row, viewport_bottom_row, viewport_top_row, 1, lines, 1, terminal_rows); 
+    }
+    else 
+    {
+        lines = -lines;
+        printf(
+            ESC_SET_VIEWPORT_TOP_BOTTOM_MARGIN ESC_CURSOR_SET_POS ESC_REMOVE_LINES ESC_SET_VIEWPORT_TOP_BOTTOM_MARGIN,
+            viewport_top_row, viewport_bottom_row, viewport_top_row, 1, lines, 1, terminal_rows);
+
+    }
 }
