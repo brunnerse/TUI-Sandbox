@@ -33,6 +33,8 @@ protected:
 public:
     virtual bool repaint()=0;
     virtual bool update() {return repaint();}
+
+	virtual void erase(); 
 };
 
 

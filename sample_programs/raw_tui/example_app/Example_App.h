@@ -1,7 +1,7 @@
 #pragma once
 
 #include "TUI_App.h"
-#include "Basic_App_Components.h"
+#include "Example_App_Components.h"
 
 #include <time.h>
 
@@ -45,7 +45,7 @@ private:
 
     bool update_time();
     bool show_exit_screen();
-    bool print_character(char c);
+    bool print_character(char c, uint16_t row);
 
     std::unique_ptr<Status_Component> comp_status = nullptr;
     std::unique_ptr<WindowSize_Component> comp_win_size = nullptr;

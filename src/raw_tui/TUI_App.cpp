@@ -6,6 +6,14 @@
 #include <termios.h>
 #include <signal.h>
 
+void TUI_Component::erase()
+{
+	tc_cursor_set_pos(bounds.row, bounds.col);
+	for (int i = 0; i < bounds.height; i++) { 
+		tc_erase_characters(bounds.width);
+		tc_cursor_move_row(1);
+	}
+}
 
 void TUI_App::handler_exit(int i) 
 {

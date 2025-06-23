@@ -1,4 +1,4 @@
-#include "Basic_App.h"
+#include "Example_App.h"
 
 
 #include <assert.h>
@@ -19,6 +19,7 @@
 #include "ANSI_Escape_Codes.h"
 
 
+static uint16_t char_row = 0;
 
 int Basic_App::repaint_all() {
 
@@ -46,11 +47,15 @@ int Basic_App::repaint_all() {
         this->comp_time->repaint();
         this->comp_cmdline->repaint();
         this->comp_text->repaint();
+
     } 
     else if (this->status == Status::EXIT) 
     {
         this->comp_exit->repaint();
     }
+
+    // Reset character row
+    char_row = 0;
 
     return 0;
 }
@@ -96,7 +101,20 @@ int Basic_App::run() {
 
     if (c != EOF) {
 
-        print_character((char)c);
+        if (char_row < terminal_rows - 2) {
+            char_row++;
+        }
+        else {
+            this->comp_win_size->erase();
+            this->comp_time->erase();
+            this->comp_text->erase();
+            tc_scroll_viewport(-1, 1, terminal_rows-2, terminal_rows);
+            this->comp_win_size->repaint();
+            this->comp_time->repaint();
+            this->comp_text->repaint();
+        }
+
+        print_character((char)c, char_row);
 
         if (c == LF) {
             std::string command = comp_cmdline->clear();
@@ -132,28 +150,23 @@ bool Basic_App::process_command(const char* cmd) {
         return true;
     } else if (strcmp(cmd, "test") == 0) {
         return true;
+    } else if (strcmp(cmd, "clear") == 0) {
+        this->repaint_all();
+        return true;
     }
     return false;
 }
 
 
-// TODO move in extra component
-// TODO scroll once it is full
-bool Basic_App::print_character(char c) {
-    static uint16_t row = 1; //TODO reset row regularly
-//    tc_cursor_save_pos();
+bool Basic_App::print_character(char c, uint16_t row) {
     tc_cursor_set_pos(row, 0);
-    row += 1;
-
     tc_color_set(Color::CYAN);
     printf("~");
     tc_color_set(Color::WHITE);
     printf("%5u\t\\x%x",  (unsigned)c, (unsigned)c);
     tc_color_set(Color::YELLOW);
     printf("\t'%c'", ('0' <= c && c <= 'z') ? c : '?');
-//    tc_cursor_restore_pos();
     tc_mode_reset();
-
     return true;
 }
 
