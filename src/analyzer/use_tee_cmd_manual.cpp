@@ -43,8 +43,9 @@ int main(int argc, char **argv)
     else 
         out_file = stdout;
 
-    // Disable buffer to output file TODO necessary?
-    setbuf(out_file, NULL);
+    // Disable output buffer for /dev/xx files 
+    if (args.out_files[0].find_first_of("/dev/") == 0)
+        setbuf(out_file, NULL); 
 
     signal(SIGINT, sigint_handler);
 

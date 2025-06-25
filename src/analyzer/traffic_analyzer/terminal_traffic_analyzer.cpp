@@ -35,6 +35,7 @@ void TerminalTrafficAnalyzer::init_pre_suffixes()
     esc_code_suffix = ">";
 
 
+    // TODO use different color when in ACS (Shift In used)
 
     char str[20];
     if (this->USE_COLORS)
@@ -119,7 +120,7 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
             else // Else: Character still part of escape expression 
                 buffer.push_back(c);
 
-            // If expression just ended ; TODO this does not work for special keys like F1, PGUP,...
+            // If expression just ended or ends with this character 
             if (expression_ended || (isalpha(c) && c != 'O'))
             {
                 in_esc_expression = false;
@@ -239,15 +240,25 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
 
     //fprintf(out_file, "Parsing expr '%s' type %c\n", expr, type);
 
+    if (expr[0] == '(') {
+        switch(expr[1]) {
+            case 'B':
+                snprintf(out_description, out_length, "Set G0 (default character set) to ASCII");
+                break;
+            case '0':
+                snprintf(out_description, out_length, "Set G0 (default character set) to ACS (for line-drawing)");
+                break;
+            default:
+                snprintf(out_description, out_length, "Unknown G0 character set selection");
+        }
+        return true;
+    }
 
     if (expr[0] != '[' && expr[0] != 'O') {
-        while (*expr != '\0')
-            fprintf(out_file, "%x\t", *(expr++));
         // TODO handle these kind of expressions specially, also in capture() method
         snprintf(out_description, out_length, "Unknown special expression");
         return true;
     }
-
 
     const char *expr_nums = &expr[ isalnum(expr[1]) ? 1 : 2];
 
@@ -392,24 +403,15 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
             else
                 snprintf(out_description, out_length, "Move cursor to home (line 0, col 0)");
             break;
-        case 'J': {
-            // Erase in display
-            const char *text = "entire";
-            if (expr_numbers.size() > 0 && expr_numbers[0] == 1)
-                text = "from cursor until end of";
-            else if (expr_numbers.size() > 0 && expr_numbers[0] == 2)
-                text = "from cursor to beginning of";
-            snprintf(out_description, out_length, "Erase %s display", text);
-            break;
-        }
+        case 'J': 
         case 'K': {
-            // Erase in line
+            // Erase in display / line
             const char *text = "entire";
-            if (expr_numbers.size() > 0 && expr_numbers[0] == 1)
+            if (expr_numbers.size() > 0 && expr_numbers[0] == 0)
                 text = "from cursor until end of";
-            else if (expr_numbers.size() > 0 && expr_numbers[0] == 2)
+            else if (expr_numbers.size() > 0 && expr_numbers[0] == 1)
                 text = "from cursor to beginning of";
-            snprintf(out_description, out_length, "Erase %s line", text);
+            snprintf(out_description, out_length, "Erase %s %s", text, type == 'J' ? "display" : "line");
             break;
         }
         case 'X': {
@@ -469,6 +471,20 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
                 return true;
             snprintf(out_description, out_length, "Set viewport margins to [top=%u, bottom=%u]", expr_numbers[0], expr_numbers[1]);
             return true;
+        case 'n':
+            if (expr_numbers.size() != 1)
+                return true;
+            if (expr_numbers[0] == 6)
+                snprintf(out_description, out_length, "Request current cursor position");
+            else
+                snprintf(out_description, out_length, "Unknown expression");
+            return true;
+        case 'R':
+            if (expr_numbers.size() != 2)
+                return true;
+            snprintf(out_description, out_length, "Response to request: Current cursor position is [row=%u, col=%u]",
+                     expr_numbers[0], expr_numbers[1]);
+            return true;
         default:
             snprintf(out_description, out_length, "Unknown expression");
             break;
@@ -517,11 +533,11 @@ bool TerminalTrafficAnalyzer::parse_esc_code(char c, const char **out_token, con
            break;
         case '\x0e':
            *out_token = "SO";
-           *out_description = "Shift out";
+           *out_description = "Shift out (use ASCII character set)";
             break;
         case '\x0f':
            *out_token = "SI";
-           *out_description = "Shift in";
+           *out_description = "Shift in (use ACS (line-drawing character set))";
             break;
         default:
             if (c >= ' ' && c <= '~')
