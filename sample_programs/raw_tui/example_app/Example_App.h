@@ -9,10 +9,10 @@
 
 
 
-class Basic_App : public TUI_App {
+class Example_App : public TUI_App {
 
 public:
-	Basic_App() :
+	Example_App() :
        TUI_App(true, true, true, true),
        start_time_s(time(NULL))
 	{
@@ -41,11 +41,15 @@ private:
     bool process_command(const char* cmd);
 
     void status_set(const char* status);
-    void status_clear();
 
     bool update_time();
-    bool show_exit_screen();
     bool print_character(char c, uint16_t row);
+
+    void enter_exit_screen();
+    void quit_exit_screen();
+
+    virtual void app_handler_exit();
+
 
     std::unique_ptr<Status_Component> comp_status = nullptr;
     std::unique_ptr<WindowSize_Component> comp_win_size = nullptr;

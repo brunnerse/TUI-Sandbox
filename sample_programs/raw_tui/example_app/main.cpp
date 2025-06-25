@@ -10,14 +10,12 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-    Basic_App app;
+    Example_App app;
 
     int ret = app.start();
 
     assert(0 == ret);
 
-    printf("App ended.\n");
-
-    return 1;
+    return 0;
 }
 

@@ -19,12 +19,14 @@
 #include "ANSI_Escape_Codes.h"
 
 
+#define NUM_EXIT_OPTIONS 2
+
+
 static uint16_t char_row = 0;
 
-int Basic_App::repaint_all() {
+int Example_App::repaint_all() {
 
-// TODO Handle when in exit query; e.g. window size is changed while exit query
-    assert(terminal_rows > 0 && terminal_columns >= 20);
+    assert(terminal_rows >= 4 && terminal_columns >= 25);
 
     // Update data of components
     this->comp_win_size->update_winsize_values(terminal_rows, terminal_columns);
@@ -60,7 +62,7 @@ int Basic_App::repaint_all() {
     return 0;
 }
 
-int Basic_App::init_graphics() {
+int Example_App::init_graphics() {
 
     assert(this->terminal_initialized);
 
@@ -68,9 +70,9 @@ int Basic_App::init_graphics() {
     this->comp_win_size = std::make_unique<WindowSize_Component>(terminal_rows, terminal_columns);
     this->comp_time = std::make_unique<Time_Component>(start_time_s);
     this->comp_cmdline = std::make_unique<CommandLine_Component>();
-    this->comp_text = std::make_unique<TextBox_Component>("Basic App");
+    this->comp_text = std::make_unique<TextBox_Component>("Example App");
 
-    this->comp_exit = std::make_unique<Exit_Component<2>>();
+    this->comp_exit = std::make_unique<Exit_Component<NUM_EXIT_OPTIONS>>();
     comp_exit->set_option_text(0, "Yes");
     comp_exit->set_option_text(1, "No");
 
@@ -89,53 +91,98 @@ int Basic_App::init_graphics() {
 
 
 
-
-int Basic_App::run() {
-
-    if (update_time())  {
-        this->comp_time->update(current_time_ms, current_time_epoch_s);
-        this->comp_cmdline->update();
+void Example_App::app_handler_exit() 
+{
+    switch(this->status) {
+        default:
+            this->enter_exit_screen();
+            break;
+        case Status::EXIT:
+            this->mark_for_exit();
+            break;
     }
+}
 
-    int c = getchar();
-
-    if (c != EOF) {
-
-        if (char_row < terminal_rows - 2) {
-            char_row++;
-        }
-        else {
-            this->comp_win_size->erase();
-            this->comp_time->erase();
-            this->comp_text->erase();
-            tc_scroll_viewport(-1, 1, terminal_rows-2, terminal_rows);
-            this->comp_win_size->repaint();
-            this->comp_time->repaint();
-            this->comp_text->repaint();
-        }
-
-        print_character((char)c, char_row);
-
-        if (c == LF) {
-            std::string command = comp_cmdline->clear();
-
-            if (process_command(command.c_str())) {
-                status_set((std::string("Processed command: ") + command).c_str());
-            } else {
-                status_set((std::string("Unknown command: ") + command).c_str());
+int Example_App::run() {
+    switch (status) {
+        default:
+        case Status::IDLE: {
+            if (update_time())  {
+                this->comp_time->update(current_time_ms, current_time_epoch_s);
+                this->comp_cmdline->update();
             }
-            clear_status_time_ms = current_time_ms + 2000;
-        } else if (c == DEL) {
-            comp_cmdline->pop_char();
-        } else  {
-            comp_cmdline->push_char((char)c);
+
+            int c = getchar();
+
+            if (c != EOF) 
+            {
+                if (char_row < terminal_rows - 2) {
+                    char_row++;
+                } else {
+                    this->comp_win_size->erase();
+                    this->comp_time->erase();
+                    this->comp_text->erase();
+                    tc_scroll_viewport(-1, 1, terminal_rows-2, terminal_rows);
+                    this->comp_win_size->repaint();
+                    this->comp_time->repaint();
+                    this->comp_text->repaint();
+                }
+
+                print_character((char)c, char_row);
+
+                if (c == LF) {
+                    std::string command = comp_cmdline->clear();
+
+                    if (process_command(command.c_str())) {
+                        status_set((std::string("Processed command: ") + command).c_str());
+                    } else {
+                        status_set((std::string("Unknown command: ") + command).c_str());
+                    }
+                    clear_status_time_ms = current_time_ms + 2000;
+                } else if (c == DEL) {
+                    comp_cmdline->pop_char();
+                } else  {
+                    comp_cmdline->push_char((char)c);
+                }
+            }
+            if (current_time_ms >= clear_status_time_ms) {// && current_time - clear_status_time < __LONG_MAX__/2) // Catch overflow
+                status_set("");
+                clear_status_time_ms = __LONG_MAX__;
+            }
+            break;
+        }
+        case Status::EXIT: {
+
+            int c = getchar();
+
+            if (c != EOF) {
+                if (c == ESC) {
+                    std::string escape_expression;
+                    do {
+                        escape_expression.push_back((char)c);
+                        c = getchar();
+                    } while (c != EOF && !isspace(c));
+                    if (escape_expression.compare(CODE_ESC) == 0) {
+                        this->quit_exit_screen();
+                    } else if (escape_expression.compare(CODE_ESC"[D") == 0) {
+                        comp_exit->set_option(std::max(comp_exit->get_option() - 1, 0));
+                    } else if (escape_expression.compare(CODE_ESC"[C") == 0) {
+                        comp_exit->set_option(std::min(comp_exit->get_option() + 1, NUM_EXIT_OPTIONS-1));
+                    }
+                } else {
+                    if (c == ' ' || c == CODE_LF[0])
+                    {
+                        if (comp_exit->get_option() == 0)
+                            this->mark_for_exit();
+
+                        this->quit_exit_screen();
+                    }
+                }
+            }
+            break;
         }
     }
 
-    if (current_time_ms >= clear_status_time_ms) {// && current_time - clear_status_time < __LONG_MAX__/2) // Catch overflow
-        status_set("");
-        clear_status_time_ms = __LONG_MAX__;
-    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
@@ -143,10 +190,9 @@ int Basic_App::run() {
 }
 
 
-bool Basic_App::process_command(const char* cmd) {
+bool Example_App::process_command(const char* cmd) {
     if (strcmp(cmd, "exit") == 0) {
-        // TODO handle exit_screen differently (e.g. state machine) so the normal run() still runs as usual
-        this->show_exit_screen();
+        this->enter_exit_screen();
         return true;
     } else if (strcmp(cmd, "test") == 0) {
         return true;
@@ -158,7 +204,7 @@ bool Basic_App::process_command(const char* cmd) {
 }
 
 
-bool Basic_App::print_character(char c, uint16_t row) {
+bool Example_App::print_character(char c, uint16_t row) {
     tc_cursor_set_pos(row, 0);
     tc_color_set(Color::CYAN);
     printf("~");
@@ -170,12 +216,12 @@ bool Basic_App::print_character(char c, uint16_t row) {
     return true;
 }
 
-void Basic_App::status_set(const char* status) {
+void Example_App::status_set(const char* status) {
     this->comp_status->update_status(status);
 }
 
 
-bool Basic_App::update_time() {
+bool Example_App::update_time() {
     static time_t last_update_time_ms = 0;
 
     this->current_time_epoch_s = time(NULL);
@@ -188,66 +234,23 @@ bool Basic_App::update_time() {
     }
     return false;
 }
-
-
-#define NUM_EXIT_OPTIONS 2
-
-bool Basic_App::show_exit_screen() 
+void Example_App::enter_exit_screen()
 {
+    this->status = Status::EXIT;
 //    tc_save_screen();
     tc_cursor_set_invisible();
 
-//    tc_alt_screen_enter();
-    tc_erase_all();
-
-
     comp_exit->set_option(1);
-
-    this->status = Status::EXIT;
     this->repaint_all();
-    
-
-    std::string escape_expression;
-    bool escaped = false;
-
-    while (this->running) {
-        int c = getchar();
-
-        if (c != EOF) {
-            if (c == ESC) {
-                escaped = !escaped;
-                escape_expression.clear();
-            }
-            else {
-                if (escaped) {
-                    escape_expression.push_back((char)c);
-                    if (isalpha(c)) {
-                        escaped = false;
-                        if (escape_expression.compare("[D") == 0) {
-                            comp_exit->set_option(std::max(comp_exit->get_option() - 1, 0));
-                        } else if (escape_expression.compare("[C") == 0) {
-                            comp_exit->set_option(std::min(comp_exit->get_option() + 1, NUM_EXIT_OPTIONS-1));
-                        }
-                    }
-                } else {
-                    if (c == ' ' || c == CODE_LF[0])
-                        break;
-                }
-            }
-        }
-    }
-
-    // Mark for exiting
-    if (comp_exit->get_option() == 0) {
-        this->mark_for_exit();
-    } else {
-        this->status = Status::IDLE;
-        this->repaint_all();
-    }
-
-//    tc_alt_screen_exit();
-    tc_cursor_reset_invisible();
-//   tc_restore_screen();
-
-    return true;
 }
+
+void Example_App::quit_exit_screen()
+{
+    this->status = Status::IDLE;
+    this->repaint_all();
+
+    tc_cursor_reset_invisible();
+
+
+}
+
