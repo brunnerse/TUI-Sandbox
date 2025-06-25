@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <string.h>
+
+#include <unistd.h>
+
+#include <string>
 
 #include "ANSI_Escape_Codes.h"
 
@@ -185,3 +190,77 @@ void tc_scroll_viewport(int16_t lines, uint16_t viewport_top_row, uint16_t viewp
 
     }
 }
+
+#define TC_CURSOR_REQUEST_HANDLE_UNEXPECTED {return false;}
+//#define TC_CURSOR_REQUEST_HANDLE_UNEXPECTED {step = 1;}
+
+bool tc_cursor_request_position(uint16_t *row, uint16_t *col)
+{
+    // use write and read to overcome any buffer issues with stdin and stdout streams
+    write(STDOUT_FILENO, ESC_CURSOR_REQUEST_POS, strlen(ESC_CURSOR_REQUEST_POS));
+
+    // Parse response ESC[#row;#colR
+    int iterations = 0;
+    char c;
+    std::string s;
+    int step = 0;
+    do {
+        ssize_t size = read(STDIN_FILENO, &c, 1);
+        if (size > 0)
+        {
+            switch (step){
+                case 0:
+                    if (c == ESC)
+                        step = 1;
+                    else 
+                        TC_CURSOR_REQUEST_HANDLE_UNEXPECTED 
+                    break;
+                case 1:
+                    if (c == '[')
+                        step = 2;
+                    else 
+                        TC_CURSOR_REQUEST_HANDLE_UNEXPECTED 
+                    break;
+                case 2: {
+                    if (c == ';') {
+                        *row = (uint16_t)atoi(s.c_str());
+                        s.clear();
+                        step = 3;
+                    } else if (!isdigit(c))
+                        TC_CURSOR_REQUEST_HANDLE_UNEXPECTED
+                    else
+                        s.push_back(c);
+                    break;
+                }
+                case 3: {
+                    if (c == 'R') {
+                        *col = (uint16_t)atoi(s.c_str());
+                        return true; // Fully parsed
+                    } else if (!isdigit(c))
+                        TC_CURSOR_REQUEST_HANDLE_UNEXPECTED
+                    else
+                        s.push_back(c);
+                    break;
+                }
+                default:
+                    assert(0);
+            }
+        }
+    } while (++iterations < 1e6);
+
+    return false;
+}
+
+bool tc_test_terminal_size(uint16_t *rows, uint16_t *cols)
+{
+    // Test cursor position: Set cursor pos to (1000, 1000) so it is at the bottom right corner, than request the cursor position
+    uint16_t row_prev, col_prev;
+    if (!tc_cursor_request_position(&row_prev, &col_prev))
+        return false;
+    tc_cursor_set_pos(1000, 1000);
+    if (!tc_cursor_request_position(rows, cols))
+        return false;
+    tc_cursor_set_pos(row_prev, col_prev);
+    return true;
+}
+

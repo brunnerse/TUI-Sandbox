@@ -65,3 +65,6 @@ void tc_alt_screen_exit();
 
 // Scroll viewport between top_line and bottom_line <lines> up;  if <lines> is negative, scroll down
 void tc_scroll_viewport(int16_t lines, uint16_t viewport_top_row, uint16_t viewport_bottom_row, uint16_t terminal_rows);
+
+bool tc_cursor_request_position(uint16_t *row, uint16_t *col);
+bool tc_test_terminal_size(uint16_t *rows, uint16_t *cols);
