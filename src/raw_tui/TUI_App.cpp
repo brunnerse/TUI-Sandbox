@@ -6,6 +6,7 @@
 #include <termios.h>
 #include <signal.h>
 
+
 void TUI_Component::erase()
 {
 	tc_cursor_set_pos(bounds.row, bounds.col);
@@ -26,10 +27,8 @@ void TUI_App::handler_exit(int i)
 void TUI_App::handler_window_size_changed(int i) 
 {
 	(void)i;
-	uint16_t cols, rows;
-	terminal_cfg_get_size(&rows, &cols);
 	if (TUI_App::initialized_instance != nullptr) {
-		TUI_App::initialized_instance->app_handler_window_size_changed(rows, cols);
+		TUI_App::initialized_instance->app_handler_window_size_changed();
 	}
 }
 
@@ -40,18 +39,49 @@ void TUI_App::app_handler_exit()
 		this->running = false;
 }
 
-void TUI_App::app_handler_window_size_changed(uint16_t new_rows, uint16_t new_columns)
+void TUI_App::app_handler_window_size_changed()
 {
-	this->terminal_rows = new_rows;
-	this->terminal_columns = new_columns;
-
+	this->read_terminal_size();
 	this->repaint_all();
+}
+
+
+void TUI_App::read_terminal_size() 
+{
+	// First try reading the terminal cfg,
+	// if that does not work (e.g. not connected to terminal) try using it via escape expressions (tc_test_terminal_size)
+	uint16_t rows, cols;
+	if (this->is_connected_to_terminal && terminal_cfg_get_size(&rows, &cols) == 0)
+	{
+	} else if (tc_test_terminal_size(&rows, &cols))
+	{ 
+	} else
+	{
+		// Assign default values
+		rows = 20;
+		cols = 80;
+	}
+
+
+	this->terminal_rows = rows;
+	this->terminal_columns = cols;
 }
 
 
 int TUI_App::start() 
 {
+	bool is_output_a_terminal = isatty(STDOUT_FILENO);
+	bool is_input_a_terminal = isatty(STDIN_FILENO);
+
+	if (!is_input_a_terminal)
+		fprintf(stderr, "Warning: Input is not a terminal\n");
+	if (!is_output_a_terminal)
+		fprintf(stderr, "Warning: Output is not a terminal\n");
+	if (!is_output_a_terminal || !is_input_a_terminal)
+		sleep(1);
+
 	this->init_terminal();
+
 	this->init_graphics();
 
 	this->running = true;
@@ -73,8 +103,12 @@ int TUI_App::init_terminal()
 	TUI_App::initialized_instance = this;
 
 	// Setup terminal config 
-	terminal_cfg_store();
-	terminal_cfg_set(!this->cfg_disable_echo, !this->cfg_disable_canonical, this->cfg_set_input_nonblocking);
+	this->is_connected_to_terminal = terminal_is_connected();
+	if (this->is_connected_to_terminal)
+	{
+		terminal_cfg_store();
+		terminal_cfg_set(!this->cfg_disable_echo, !this->cfg_disable_canonical, this->cfg_set_input_nonblocking);
+	}
 
 	// Do not buffer stdout
 	setbuf(stdout, NULL);
@@ -82,18 +116,8 @@ int TUI_App::init_terminal()
 	if (this->cfg_use_alt_screen)
 		tc_alt_screen_enter();
 
-	// Read terminal size
-	if (isatty(STDOUT_FILENO))
-	{
-		terminal_cfg_get_size(&this->terminal_rows, &this->terminal_columns);
-	}
-	else
-	{
-		// Not connected to output terminal; still start the application using default size values
-		this->terminal_rows = 100;
-		this->terminal_columns = 80;
-	}
 
+	this->read_terminal_size();
 
 	// Setup signal handlers
 	signal(SIGINT, handler_exit); 

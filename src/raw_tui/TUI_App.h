@@ -73,6 +73,8 @@ private:
 	const bool cfg_disable_canonical;
 	const bool cfg_set_input_nonblocking;
 
+	bool is_connected_to_terminal;
+
 	int init_terminal();
 	int uninit_terminal();
 
@@ -81,15 +83,13 @@ private:
 
 	virtual int repaint_all()=0; 
 
-
+	virtual void read_terminal_size();
 
 	virtual void app_handler_exit();
-	virtual void app_handler_window_size_changed(uint16_t new_rows, uint16_t new_columns);
-
+	virtual void app_handler_window_size_changed();
 
 	static void handler_exit(int i);
 	static void handler_window_size_changed(int i);
-
 
 	inline static TUI_App *initialized_instance = nullptr; 
 };

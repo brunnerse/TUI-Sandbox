@@ -12,6 +12,8 @@
 #define CR '\r'
 #define LF '\n'
 #define FF '\f' // Formfeed; equals new page
+#define SI '\xe' // Shift in
+#define SO '\xf' // Shift out 
 
 #define CODE_ESC "\x1b"
 #define CODE_DEL "\x7f"
@@ -22,6 +24,9 @@
 #define CODE_CR "\r"
 #define CODE_LF "\n"
 #define CODE_FF "\f" // Formfeed; equals new page
+#define CODE_SI "\xe" // Shift in
+#define CODE_SO "\xf" // Shift out 
+
 
 // Cursor Controls
 #define ESC_CURSOR_SET_POS_TO_HOME      CODE_ESC"[H"
