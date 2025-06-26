@@ -23,10 +23,12 @@ void TerminalTrafficAnalyzer::init_pre_suffixes()
 {
     
     if (! (this->USE_COLORS && this->PRINT_COLORS_ONLY) ) {
-        input_prefix = "{IN '";
-        input_suffix = "'}";
+        fd_input.prefix = "{IN '";
+        fd_input.suffix = "'}";
 	    expression_prefix = "| ";
         expression_suffix = " |";
+        acs_prefix = "[ACS \"";
+        acs_suffix = "\"]";
     }
 
     description_prefix = " (";
@@ -35,17 +37,14 @@ void TerminalTrafficAnalyzer::init_pre_suffixes()
     esc_code_suffix = ">";
 
 
-    // TODO use different color when in ACS (Shift In used)
-
     char str[20];
     if (this->USE_COLORS)
     {
-
         snprintf(str, sizeof(str), ESC_MODE, 
             ESC_MODE_COLOR_FG_OFFSET + (uint8_t)Color::GREEN);
-        input_prefix.insert(0,  str);
+        fd_input.prefix.insert(0,  str);
         snprintf(str, sizeof(str), ESC_MODE, (uint8_t)Mode::NONE);
-        input_suffix.append(str);
+        fd_input.suffix.append(str);
 
         snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::BOLD, 
             ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::BLACK);
@@ -74,6 +73,13 @@ void TerminalTrafficAnalyzer::init_pre_suffixes()
         snprintf(str, sizeof(str), ESC_MODE_COLOR, ESC_MODE_RESET_OFFSET + (uint8_t)Mode::DIM, 
             ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::DEFAULT);
         description_suffix.append(str);
+
+        snprintf(str, sizeof(str), ESC_MODE_COLOR, (uint8_t)Mode::ITALIC, 
+            ESC_MODE_COLOR_BG_BRIGHT_OFFSET + (uint8_t)Color::BLACK);
+        acs_prefix.insert(0,  str);
+        snprintf(str, sizeof(str), ESC_MODE_COLOR, ESC_MODE_RESET_OFFSET + (uint8_t)Mode::ITALIC, 
+            ESC_MODE_COLOR_BG_OFFSET + (uint8_t)Color::DEFAULT);
+        acs_suffix.append(str);
     } 
     else 
     {
@@ -81,12 +87,33 @@ void TerminalTrafficAnalyzer::init_pre_suffixes()
     }
 }
 
-
-
-void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, 
-        const std::string& suffix, bool single_escapes_possible)
+void TerminalTrafficAnalyzer::print_data(const char data[], size_t length, bool is_acs)
 {
-    bool in_esc_expression = !buffer.empty();
+    if (length == 0)
+        return;
+    if (!is_acs) {
+        fwrite(data, length, 1, out_file);
+    }
+    else {
+
+        fwrite(acs_prefix.c_str(), acs_prefix.size(), 1, out_file);
+        fwrite(data, length, 1, out_file);
+        if (USE_COLORS) {
+            fprintf(out_file, "\"" ESC_MODE "(" ESC_CHARSET_SWITCH_TO_ACS, (uint8_t)Mode::DIM);
+            fwrite(data, length, 1, out_file);
+            fprintf(out_file, ESC_CHARSET_SWITCH_TO_ASCII ")" ESC_MODE "]" ESC_MODE, 
+                ESC_MODE_RESET_OFFSET + (uint8_t)Mode::DIM, ESC_MODE_RESET_OFFSET + (uint8_t)Mode::ITALIC);
+        }
+        else 
+            fwrite(acs_suffix.c_str(), acs_suffix.size(), 1, out_file);
+    }
+
+}
+
+
+void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, fd_state *fd_x)
+{
+    bool in_esc_expression = !fd_x->buffer.empty();
 
     bool append_linefeed = false;
 
@@ -98,7 +125,7 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
     }
     last_print_time_ms = current_ms;
 
-    fwrite(prefix.c_str(), prefix.size(), 1, out_file);
+    fwrite(fd_x->prefix.c_str(), fd_x->prefix.size(), 1, out_file);
 
     unsigned long data_idx = 0;
 
@@ -118,10 +145,10 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
             if (expression_ended) // If expression already ended: read the character again in the next iteration
                 i--;
             else // Else: Character still part of escape expression 
-                buffer.push_back(c);
+                fd_x->buffer.push_back(c);
 
             // If expression just ended or ends with this character 
-            if (expression_ended || (isalpha(c) && c != 'O'))
+            if (expression_ended || (isalpha(c) && c != 'O') || fd_x->buffer.find("(0") != std::string::npos)
             {
                 in_esc_expression = false;
 
@@ -129,58 +156,71 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
                 {
                     char expression_desc[100];
                     size_t esc_expression_pos = expression_prefix.size();
+                    std::string expression = fd_x->buffer.substr(esc_expression_pos); 
+
                     bool linefeed_after = 
-                        parse_expression(buffer.substr(esc_expression_pos).c_str(), 
-                            buffer.size() - esc_expression_pos,
+                        parse_expression(expression.c_str(), expression.size(),
                             expression_desc, sizeof(expression_desc));
 
                     append_linefeed |= linefeed_after;
                 
-                    buffer += description_prefix + expression_desc + description_suffix;
+                    fd_x->buffer += description_prefix + expression_desc + description_suffix;
+
+                    if (expression.compare(ESC_CHARSET_SWITCH_TO_ACS+1) == 0)
+                        fd_x->is_in_acs = true;
+                    else if (expression.compare(ESC_CHARSET_SWITCH_TO_ASCII+1) == 0)
+                        fd_x->is_in_acs = false;
                 }
 
-                buffer.append(expression_suffix);
+                fd_x->buffer.append(expression_suffix);
             }
         }
-        else if (is_esc_code)
+        else 
         {
-            // Write all data so far
-            fwrite(data + data_idx, i - data_idx, 1, out_file);
-
-            if (c == ESC && !(single_escapes_possible && i == size-1))
+            if (is_esc_code)
             {
-                buffer += expression_prefix;
-                in_esc_expression = true;
-            }
-            else 
-            {
-                buffer += esc_code_prefix;
-                if (token[0] == '?') {
-                    // Escape expression unknown; Add hex value to buffer
-                    char s[10];
-                    snprintf(s, sizeof(s), "\\x%02x", c);
-                    buffer.append(s);
-                } else {
+                // Write all data so far
+                print_data(data + data_idx, i - data_idx, fd_x->is_in_acs);
 
-                    buffer += token;
-                    if (PRINT_ESC_CODE_DESCRIPTIONS)
+                if (c == ESC && !(fd_x->single_escapes_possible && i == size-1))
+                {
+                    fd_x->buffer += expression_prefix;
+                    in_esc_expression = true;
+                }
+                else 
+                {
+                    fd_x->buffer += esc_code_prefix;
+                    if (token[0] == '?') {
+                        // Escape expression unknown; Add hex value to buffer
+                        char s[10];
+                        snprintf(s, sizeof(s), "\\x%02x", c);
+                        fd_x->buffer.append(s);
+                    } else {
+
+                        fd_x->buffer += token;
+                        if (PRINT_ESC_CODE_DESCRIPTIONS)
+                        {
+                            fd_x->buffer += description_prefix + description + description_suffix;
+                        }
+                    }
+                    fd_x->buffer += esc_code_suffix;
+
+                    if (c == LF || c == CR || c == FF || c == VT)
                     {
-                        buffer += description_prefix + description + description_suffix;
+                        append_linefeed = true; 
                     }
                 }
-                buffer += esc_code_suffix;
+            }
+            else if (fd_x->is_in_acs)
+            {
 
-                if (c == LF || c == CR || c == FF || c == VT)
-                {
-                    append_linefeed = true; 
-                }
             }
         }
 
-        if (!in_esc_expression && buffer.size() > 0)
+        if (!in_esc_expression && fd_x->buffer.size() > 0)
         {
-            fwrite(buffer.c_str(), buffer.size(), 1, out_file);
-            buffer.clear();
+            fwrite(fd_x->buffer.c_str(), fd_x->buffer.size(), 1, out_file);
+            fd_x->buffer.clear();
             data_idx = i + 1;
 
             // If at end of data: Append after suffix later, otherwise append directly
@@ -193,21 +233,21 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, std::stri
     
     // Write all remaining data if not currently writing to buffer
     if (!in_esc_expression) {
-        fwrite(data + data_idx, size - data_idx, 1, out_file);
+        print_data(data + data_idx, size - data_idx, fd_x->is_in_acs);
     }
-    fwrite(suffix.c_str(), suffix.size(), 1, out_file);
+    fwrite(fd_x->suffix.c_str(), fd_x->suffix.size(), 1, out_file);
     if (append_linefeed)
         fputc(LF, out_file);
 }
 
 void TerminalTrafficAnalyzer::capture_input(char data[], unsigned long size) 
 {
-    this->capture(data, size, input_buffer, input_prefix, input_suffix, true);
+    this->capture(data, size, &fd_input); 
 }
 
 void TerminalTrafficAnalyzer::capture_output(char data[], unsigned long size) 
 {
-    this->capture(data, size, output_buffer, output_prefix, output_suffix);
+    this->capture(data, size, &fd_output); 
 }
 
 
@@ -533,11 +573,11 @@ bool TerminalTrafficAnalyzer::parse_esc_code(char c, const char **out_token, con
            break;
         case '\x0e':
            *out_token = "SO";
-           *out_description = "Shift out (use ASCII character set)";
+           *out_description = "Shift out";
             break;
         case '\x0f':
            *out_token = "SI";
-           *out_description = "Shift in (use ACS (line-drawing character set))";
+           *out_description = "Shift in";
             break;
         default:
             if (c >= ' ' && c <= '~')

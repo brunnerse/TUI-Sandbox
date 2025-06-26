@@ -25,12 +25,10 @@ public:
 
 private:
 
-	std::string input_prefix, input_suffix;
-	std::string output_prefix, output_suffix;
 	std::string esc_code_prefix, esc_code_suffix;
 	std::string expression_prefix, expression_suffix;
 	std::string description_prefix, description_suffix;
-
+	std::string acs_prefix, acs_suffix;
 
 
 	FILE *out_file;
@@ -52,14 +50,26 @@ private:
 
 	State state;
 
-	std::string input_buffer;
-	std::string output_buffer;
+	struct fd_state {
+		std::string buffer;
+		bool is_in_acs = false;
+		const bool single_escapes_possible;
+		std::string prefix, suffix; 
+
+		fd_state(bool single_escapes) : single_escapes_possible(single_escapes) {}
+	};
+
+	fd_state fd_input = fd_state(true);
+	fd_state fd_output = fd_state(false);
 
 	void init_pre_suffixes();
 
-	void capture(char data[], unsigned long size, std::string& buffer, const std::string& prefix, const std::string& suffix, bool single_escapes_possible = false);
+	void capture(char data[], unsigned long size, fd_state *fd_x);
+
+	void print_data(const char data[], size_t length, bool is_acs);
 
 	bool parse_expression(const char* expr, size_t size, char* out_description, size_t out_length); 
 
 	static bool parse_esc_code(char c, const char **out_token, const char **out_description);
+
 };
