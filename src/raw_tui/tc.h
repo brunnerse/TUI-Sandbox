@@ -68,3 +68,6 @@ void tc_scroll_viewport(int16_t lines, uint16_t viewport_top_row, uint16_t viewp
 
 bool tc_cursor_request_position(uint16_t *row, uint16_t *col);
 bool tc_test_terminal_size(uint16_t *rows, uint16_t *cols);
+
+void tc_write_acs(char acs_c);
+void tc_write_acs(const char *acs_string);

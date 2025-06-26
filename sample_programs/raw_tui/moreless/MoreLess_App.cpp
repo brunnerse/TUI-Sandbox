@@ -43,10 +43,18 @@ int MoreLess_App::init_graphics()
 
 int MoreLess_App::repaint_all() 
 {
+//        tc_scroll_viewport(-10, 1, terminal_rows, terminal_rows);
     // TODO print lines of file content and status bar
+    printf("\r\n\n");
 
+    tc_write_acs(CODE_SI ACS_LARROW ACS_DARROW ACS_RARROW ACS_UARROW CODE_SO "\n\n\r");
+    tc_write_acs(ACS_BOARD " " ACS_BLOCK " " ACS_DIAMOND " " ACS_CKBOARD "\r\n");
+    tc_write_acs(ACS_ULCORNER ACS_HLINE ACS_HLINE ACS_TTEE ACS_HLINE ACS_URCORNER "\r\n"); 
+    tc_write_acs(ACS_LTEE ACS_HLINE ACS_HLINE ACS_PLUS ACS_HLINE ACS_RTEE "\r\n"); 
+    tc_write_acs(ACS_VLINE "  " ACS_VLINE " " ACS_VLINE "\r\n"); 
+    tc_write_acs(ACS_LLCORNER ACS_HLINE ACS_HLINE ACS_BTEE ACS_HLINE ACS_LRCORNER "\r\n\n"); 
+    tc_write_acs(ACS_S1 ACS_S3 ACS_S7 ACS_S9 "r\n\n"); 
 
-    
     return 0;
 }
 
@@ -56,7 +64,9 @@ int MoreLess_App::repaint_all()
 int MoreLess_App::run() 
 {
     // TODO check if blocking (as it is supposed to be)
-    int c = getchar();
+    int c = getc(stdin);
+
+    fprintf(stderr, "Got %c", c);
 
     if (c != EOF) {
         if (c == LF) {
@@ -65,9 +75,10 @@ int MoreLess_App::run()
             this->mark_for_exit();
         }
     }
+    else
+        fprintf(stderr, "Got EOF");
 
 
-    //std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     return 0;
 }

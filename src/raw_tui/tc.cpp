@@ -264,3 +264,13 @@ bool tc_test_terminal_size(uint16_t *rows, uint16_t *cols)
     return true;
 }
 
+
+void tc_write_acs(char acs_c)
+{
+    printf(ESC_CHARSET_SWITCH_TO_ACS "%c" ESC_CHARSET_SWITCH_TO_ASCII, acs_c);
+}
+
+void tc_write_acs(const char *acs_string)
+{
+    printf(ESC_CHARSET_SWITCH_TO_ACS "%s" ESC_CHARSET_SWITCH_TO_ASCII, acs_string);
+}

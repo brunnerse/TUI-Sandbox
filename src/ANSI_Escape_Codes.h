@@ -145,4 +145,47 @@ const std::map<Color, const char*> Color_Str {
 #define ESC_ALT_BUFFER_DIS      CODE_ESC"[?1049l"
 
 
+#define ESC_CHARSET_SWITCH_TO_ACS 		CODE_ESC"(0"
+#define ESC_CHARSET_SWITCH_TO_ASCII 	CODE_ESC"(B"
 
+// Alternative Character Set ACS
+// Overview: https://c-for-dummies.com/ncurses/tables/table04-03.php
+
+#define ACS_ULCORNER	"l" /* upper left corner */
+#define ACS_LLCORNER	"m" /* lower left corner */
+#define ACS_URCORNER	"k" /* upper right corner */
+#define ACS_LRCORNER	"j" /* lower right corner */
+#define ACS_LTEE	"t" /* tee pointing right */
+#define ACS_RTEE	"u" /* tee pointing left */
+#define ACS_BTEE	"v" /* tee pointing up */
+#define ACS_TTEE	"w" /* tee pointing down */
+#define ACS_HLINE	"q" /* horizontal line */
+#define ACS_VLINE	"x" /* vertical line */
+#define ACS_PLUS	"n" /* large plus or crossover */
+#define ACS_S1		"o" /* scan line 1 */
+#define ACS_S9		"s" /* scan line 9 */
+#define ACS_DIAMOND	"\x60"  /* diamond */
+#define ACS_CKBOARD	"a" /* checker board (stipple) */
+#define ACS_DEGREE	"f" /* degree symbol */
+#define ACS_PLMINUS	"g" /* plus/minus */
+#define ACS_BULLET	"~" /* bullet */
+/* Teletype 5410v1 symbols begin here */
+#define ACS_LARROW	"," /* arrow pointing left */
+#define ACS_RARROW	"+" /* arrow pointing right */
+#define ACS_DARROW	"." /* arrow pointing down */
+#define ACS_UARROW	"^" /* arrow pointing up */
+#define ACS_BOARD	"h" /* board of squares */
+#define ACS_LANTERN	"i" /* lantern symbol */
+#define ACS_BLOCK	"0" /* solid square block */
+/*
+ * These aren't documented, but a lot of System Vs have them anyway
+ * (you can spot pprryyzz{{||}} in a lot of AT&T terminfo strings).
+ * The ACS_names may not match AT&T's, our source didn't know them.
+ */
+#define ACS_S3		"p" /* scan line 3 */
+#define ACS_S7		"r" /* scan line 7 */
+#define ACS_LEQUAL	"y" /* less/equal */
+#define ACS_GEQUAL	"z" /* greater/equal */
+#define ACS_PI		"{" /* Pi */
+#define ACS_NEQUAL	"|" /* not equal */
+#define ACS_STERLING	"}" /* UK pound sign */
