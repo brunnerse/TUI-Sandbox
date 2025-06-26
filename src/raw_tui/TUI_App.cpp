@@ -35,8 +35,10 @@ void TUI_App::handler_window_size_changed(int i)
 
 void TUI_App::app_handler_exit()
 {
-	if (this->running)
-		this->running = false;
+	this->mark_for_exit();
+	// If input is set blocking: Send cursor position request so the terminal responds and getchar() unblocks
+	if (!cfg_set_input_nonblocking)
+    	write(STDOUT_FILENO, ESC_CURSOR_REQUEST_POS, sizeof(ESC_CURSOR_REQUEST_POS));
 }
 
 void TUI_App::app_handler_window_size_changed()
@@ -73,12 +75,15 @@ int TUI_App::start()
 	bool is_output_a_terminal = isatty(STDOUT_FILENO);
 	bool is_input_a_terminal = isatty(STDIN_FILENO);
 
-	if (!is_input_a_terminal)
-		fprintf(stderr, "Warning: Input is not a terminal\n");
-	if (!is_output_a_terminal)
-		fprintf(stderr, "Warning: Output is not a terminal\n");
-	if (!is_output_a_terminal || !is_input_a_terminal)
-		sleep(1);
+	if (cfg_use_alt_screen) {
+		// TODO display this warning also when not using alt screen?
+		if (!is_input_a_terminal)
+			fprintf(stderr, "Warning: Input is not a terminal\n");
+		if (!is_output_a_terminal)
+			fprintf(stderr, "Warning: Output is not a terminal\n");
+		if (!is_output_a_terminal || !is_input_a_terminal)
+			sleep(1);
+	}
 
 	this->init_terminal();
 
