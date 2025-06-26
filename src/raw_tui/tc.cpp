@@ -100,6 +100,11 @@ void tc_cursor_set_pos(uint16_t row, uint16_t col) {
 }
 
 
+void tc_cursor_set_row(uint16_t row) {
+    printf(ESC_CURSOR_SET_ROW, row);
+    cursor_pos.row = row;
+}
+
 void tc_cursor_set_column(uint16_t col) {
     printf(ESC_CURSOR_SET_COLUMN, col);
     cursor_pos.col = col;

@@ -438,6 +438,7 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
             break;
         }
         case 'H':
+        case 'f':
             if (expr_numbers.size() == 2)
                 snprintf(out_description, out_length, "Move cursor to line %u col %u", expr_numbers[0], expr_numbers[1]);
             else
@@ -468,8 +469,8 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
                 snprintf(out_description, out_length, "LEFT ARROW");
                 return false;
             }
-            break;
         case 'C':
+        case 'a':
             if (expr_numbers.size() > 0) {
                 snprintf(out_description, out_length, "Move cursor right %u columns", expr_numbers[0]);
                 return true;
@@ -486,15 +487,21 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
                 snprintf(out_description, out_length, "UP ARROW");
                 return false;
             }
-            break;
         case 'B':
+        case 'e':
             if (expr_numbers.size() > 0) {
-                return true;
                 snprintf(out_description, out_length, "Move cursor down %u lines", expr_numbers[0]);
             } else {
                 snprintf(out_description, out_length, "DOWN ARROW");
                 return false;
             }
+            return true;
+        case 'G':
+        case '`':
+            snprintf(out_description, out_length, "Move cursor to column %u", expr_numbers.empty() ? 1 : expr_numbers[0]);
+            break;
+        case 'd':
+            snprintf(out_description, out_length, "Move cursor to row %u", expr_numbers.empty() ? 1 : expr_numbers[0]);
             break;
         case 'L':
             if (expr_numbers.size() == 0)
@@ -525,6 +532,18 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
             snprintf(out_description, out_length, "Response to request: Current cursor position is [row=%u, col=%u]",
                      expr_numbers[0], expr_numbers[1]);
             return true;
+        case 's':
+            if (!expr_numbers.empty())
+                snprintf(out_description, out_length, "Ill-formed expression");
+            else
+                snprintf(out_description, out_length, "Save cursor position");
+            break;
+        case 'u':
+            if (!expr_numbers.empty())
+                snprintf(out_description, out_length, "Ill-formed expression");
+            else
+                snprintf(out_description, out_length, "Restore cursor position");
+            break;
         default:
             snprintf(out_description, out_length, "Unknown expression");
             break;

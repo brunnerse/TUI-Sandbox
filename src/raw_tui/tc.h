@@ -36,6 +36,7 @@ void tc_cursor_save_pos();
 void tc_cursor_restore_pos();
 
 void tc_cursor_set_pos(uint16_t row, uint16_t col);
+void tc_cursor_set_row(uint16_t row);
 void tc_cursor_set_column(uint16_t col);
 
 inline void tc_cursor_set_pos(cursor_pos_t pos) {

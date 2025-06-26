@@ -31,6 +31,8 @@
 // Cursor Controls
 #define ESC_CURSOR_SET_POS_TO_HOME      CODE_ESC"[H"
 #define ESC_CURSOR_SET_POS              CODE_ESC"[%u;%uH"
+#define ESC_CURSOR_SET_ROW              CODE_ESC"[%ud"
+#define ESC_CURSOR_SET_COLUMN   		CODE_ESC"[%uG"
 #define ESC_CURSOR_MOVE_UP              CODE_ESC"[%uA"
 #define ESC_CURSOR_MOVE_DOWN            CODE_ESC"[%uB"
 #define ESC_CURSOR_MOVE_RIGHT           CODE_ESC"[%uC"
@@ -39,9 +41,7 @@
 #define ESC_CURSOR_MOVE_DOWN_TO_LINE_BEGIN  CODE_ESC"[%uE"
 #define ESC_CURSOR_MOVE_UP_TO_LINE_BEGIN    CODE_ESC"[%uF"
 
-#define ESC_CURSOR_SET_COLUMN CODE_ESC"[%uG"
-
-#define ESC_CURSOR_REQUEST_POS CODE_ESC"[6n"
+#define ESC_CURSOR_REQUEST_POS 			CODE_ESC"[6n"
 
 #define ESC_CURSOR_MOVE_UP_ONE          CODE_ESC"M" // Scrolling if needed
 #define ESC_CURSOR_SAVE_POS             CODE_ESC"7"    // Using DEC sequence
