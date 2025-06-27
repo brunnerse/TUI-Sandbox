@@ -64,7 +64,7 @@ protected:
 
 	static rectangle_t* get_bounds(TUI_Component* comp) {return &comp->bounds;} 
 
-	void mark_for_exit() {this->running = false;}
+	void mark_for_exit(); 
 
 private:
 	// CFG-Settings for terminal init
@@ -80,6 +80,7 @@ private:
 
 	virtual int init_graphics()=0;
 	virtual int run()=0;
+	virtual void uninit_graphics() {};
 
 	virtual int repaint_all()=0; 
 

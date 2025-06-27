@@ -85,18 +85,31 @@ int TUI_App::start()
 			sleep(1);
 	}
 
-	this->init_terminal();
-
-	this->init_graphics();
-
 	this->running = true;
+
+	if (this->init_terminal() != 0)
+		return -1;
+
+	if (this->init_graphics() != 0) {
+		this->uninit_terminal();
+		return -2;
+	}
+
 
 	while(this->running && 0 == this->run())
 		;
 
-	this->uninit_terminal();
+	this->uninit_graphics();
+
+	if (this->uninit_terminal() != 0)
+		return -3;
 
 	return 0;
+}
+
+void TUI_App::mark_for_exit() 
+{
+	this->running = false;
 }
 
 int TUI_App::init_terminal()
