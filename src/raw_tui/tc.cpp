@@ -15,6 +15,11 @@
 
 static cursor_pos_t cursor_pos = {0, 0};  
 
+void tc_print_repeated(char c, uint32_t num_repeats)
+{
+    assert(num_repeats > 0);
+    printf("%c" ESC_REPEAT_LAST_CHAR, c, num_repeats-1);
+}
 
 void tc_mode_set(Mode mode) {
     printf(ESC_MODE, (unsigned)mode);
@@ -176,6 +181,15 @@ void tc_alt_screen_exit(){
     printf(ESC_ALT_BUFFER_DIS);
 }
 
+void tc_insert_empty_lines(uint16_t num_lines) 
+{
+    printf(ESC_INSERT_LINES, num_lines);
+}
+
+void tc_remove_lines(uint16_t num_lines) 
+{
+    printf(ESC_REMOVE_LINES, num_lines);
+}
 
 // Scroll viewport between top_line and bottom_line <lines> up;  if <lines> is negative, scroll down
 void tc_scroll_viewport(int16_t lines, uint16_t viewport_top_row, uint16_t viewport_bottom_row, uint16_t terminal_rows)

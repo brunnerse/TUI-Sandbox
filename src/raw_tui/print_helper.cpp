@@ -4,21 +4,7 @@
 #include <assert.h>
 #include <stdarg.h>
 
-int print_repeated(const char *str, unsigned num_repetitions) {
-    int ret;
-    for (unsigned i = 0; i < num_repetitions; i++)
-        ret += printf("%s", str);
-    return ret;
-}
 
-int print_zeros(unsigned num_zeros) {
-    assert(num_zeros > 0);
-    return printf("%0*u", num_zeros, 0);
-}
-
-int print_spaces(unsigned num_spaces) {
-    return printf("%*s", num_spaces, "");
-}
 
 int printf_aligned(unsigned width, Align alignment, const char* fmt, ...) {
     va_list arg;

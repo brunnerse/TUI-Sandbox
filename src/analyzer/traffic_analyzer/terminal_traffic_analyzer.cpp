@@ -437,6 +437,11 @@ bool TerminalTrafficAnalyzer::parse_expression(const char* expr, size_t size, ch
             return false;
             break;
         }
+        case 'b': {
+            snprintf(out_description, out_length, "Print previous character %u times", 
+                expr_numbers.empty() ? 1 : expr_numbers[0]);
+            break;
+        }
         case 'H':
         case 'f':
             if (expr_numbers.size() == 2)

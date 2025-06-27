@@ -62,6 +62,8 @@
 
 #define ESC_SET_VIEWPORT_TOP_BOTTOM_MARGIN 		CODE_ESC"[%u;%ur"
 
+
+
 // Color / Graphics Mode
 enum class Mode {
 	NONE = 0,
@@ -70,7 +72,7 @@ enum class Mode {
 	ITALIC = 3,
 	UNDERLINE = 4,
 	BLINKING = 5,
-	INVERSE = 7,
+	INVERSE = 7,   // Inverts the color theme
 	HIDDEN = 8,
 	STRIKETHROUGH = 9,
 	RESET_BOLD = 22 // Listed extra since it's a special case
@@ -144,6 +146,8 @@ const std::map<Color, const char*> Color_Str {
 #define ESC_ALT_BUFFER_EN       CODE_ESC"[?1049h"
 #define ESC_ALT_BUFFER_DIS      CODE_ESC"[?1049l"
 
+
+#define ESC_REPEAT_LAST_CHAR 		CODE_ESC"[%ub"
 
 #define ESC_CHARSET_SWITCH_TO_ACS 		CODE_ESC"(0"
 #define ESC_CHARSET_SWITCH_TO_ASCII 	CODE_ESC"(B"

@@ -63,7 +63,7 @@ public:
             if ((row - bounds.row) == bounds.height/2) {
                 printf_aligned(bounds.width, Align::CENTER, "%s", text);
             } else {
-                print_spaces(bounds.width);
+                tc_print_repeated(' ', bounds.width);
             }
         }
         tc_mode_reset();
@@ -279,7 +279,7 @@ public:
             tc_cursor_set_pos(row, bounds.col); 
             if (row == bounds.row || row == bounds.row + bounds.height - 1) {
                 printf("+");
-                print_repeated("-", bounds.width-2);
+                tc_print_repeated('-', bounds.width-2);
                 printf("+");
                 continue;
             }
@@ -294,7 +294,7 @@ public:
                 if ((row - bounds.row) == (bounds.height-1)/2) {
                     printf_aligned(bounds.width-2, Align::CENTER, "%s", "Exit App?");
                 } else {
-                    print_spaces(bounds.width-2);
+                    tc_print_repeated(' ', bounds.width-2);
                 }
             }
             printf("|");

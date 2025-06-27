@@ -12,6 +12,8 @@ struct cursor_pos_t {
 };
 
 
+void tc_print_repeated(char c, uint32_t num_repeats);
+
 void tc_mode_set(Mode mode);
 void tc_mode_reset(Mode mode);
 void tc_mode_reset();
@@ -63,6 +65,10 @@ void tc_restore_screen();
 
 void tc_alt_screen_enter();
 void tc_alt_screen_exit();
+
+
+void tc_insert_empty_lines(uint16_t num_lines);
+void tc_remove_lines(uint16_t num_lines);
 
 // Scroll viewport between top_line and bottom_line <lines> up;  if <lines> is negative, scroll down
 void tc_scroll_viewport(int16_t lines, uint16_t viewport_top_row, uint16_t viewport_bottom_row, uint16_t terminal_rows);
