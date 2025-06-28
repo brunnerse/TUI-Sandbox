@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 {
 
     tcdebug_args args;
-    if (!tcdebug_parse_args(argc, argv, false, false, &args))
+    if (!tcdebug_parse_args(argc, argv, false, false, false, &args))
         return 1;
 
     FILE *out_file;

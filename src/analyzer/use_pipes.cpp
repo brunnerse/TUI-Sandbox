@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 {
 
     tcdebug_args args;
-    if (!tcdebug_parse_args(argc, argv, NUM_OUTPUT_FILES != 1, true, &args))
+    if (!tcdebug_parse_args(argc, argv, NUM_OUTPUT_FILES != 1, true, true, &args))
         return 1;
 
     if (args.out_files[0].empty())
@@ -79,6 +79,9 @@ int main(int argc, char **argv)
 
     // Disable stdout buffer
     setbuf(stdout, NULL);
+
+    // Open fd to null in case we need to throw away some data from a pipe
+    int fd_null = open("/dev/null", O_WRONLY);
 
 
     // Create pipes from and to child process
@@ -167,9 +170,56 @@ int main(int argc, char **argv)
         nbytes = read(fd_child_stdout, &buf, PIPE_BUF);
         if (nbytes > 0)
         {
-            write(STDOUT_FILENO, buf, (size_t)nbytes);
-            // TODO make step by step; If analyzer catches ESC expression, delay so user can see effect
-            analyzer.capture_output(buf, (size_t)nbytes);
+            if (args.delay_after_esc_expr_ms > 0) 
+            {
+                bool user_interrupted = false;
+
+                size_t idx_tail = 0;
+                size_t idx_head = 0;
+
+                // Search for first esc and skip it (as we do not want to wait before it)
+                while (buf[idx_tail] != ESC && idx_tail + 1 < (size_t)nbytes)
+                    idx_tail++;
+
+                while (idx_tail < (size_t)nbytes) 
+                {
+                    idx_tail++;
+                    // If caught start of esc expression or end of buf:
+                    // Process everything up until ESC (excluding the ESC)
+                    if (buf[idx_tail] == ESC || idx_tail == (size_t)nbytes) 
+                    {
+                        // Calc sub-buffer dimensions, update head
+                        char *buf_start = &buf[idx_head];
+                        size_t size = idx_tail - idx_head;
+                        idx_head = idx_tail;
+
+                        write(STDOUT_FILENO, buf_start, size);
+                        analyzer.capture_output(buf_start, size);
+
+                        if (!user_interrupted) { 
+                            // Wait for specified ms; if user sends an input character, during, abort
+                            const uint32_t ms_per_loop = 10;
+                            for (uint32_t i = 0; i < args.delay_after_esc_expr_ms / ms_per_loop; i++) 
+                            {
+                                usleep(1000 * ms_per_loop);
+                                char c[5];
+                                ssize_t size = read(STDIN_FILENO, c, sizeof(c));
+                                if (size > 0) {
+                                    user_interrupted = true;
+                                    write(fd_child_stdin, c, (size_t)size);
+                                    analyzer.capture_input(c, (size_t)size);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                write(STDOUT_FILENO, buf, (size_t)nbytes);
+                analyzer.capture_output(buf, (size_t)nbytes);
+
+            }
         }
     }
 
@@ -182,6 +232,8 @@ int main(int argc, char **argv)
     printf("Program finished.\n");
     printf("==================\n");
 
+
+    close(fd_null);
 
     for (unsigned i = 0; i < num_output_files; i++)
         fclose(out_files[i]); 

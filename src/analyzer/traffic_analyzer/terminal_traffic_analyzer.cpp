@@ -211,10 +211,6 @@ void TerminalTrafficAnalyzer::capture(char data[], unsigned long size, fd_state 
                     }
                 }
             }
-            else if (fd_x->is_in_acs)
-            {
-
-            }
         }
 
         if (!in_esc_expression && fd_x->buffer.size() > 0)
