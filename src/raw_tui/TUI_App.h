@@ -66,6 +66,17 @@ protected:
 
 	void mark_for_exit(); 
 
+	virtual void app_handler_exit();
+	virtual void app_handler_window_size_changed();
+	virtual void read_terminal_size();
+
+	virtual int init_graphics()=0;
+	virtual int run()=0;
+	virtual void uninit_graphics() {};
+
+	virtual int repaint_all()=0; 
+
+
 private:
 	// CFG-Settings for terminal init
 	const bool cfg_use_alt_screen;
@@ -77,17 +88,6 @@ private:
 
 	int init_terminal();
 	int uninit_terminal();
-
-	virtual int init_graphics()=0;
-	virtual int run()=0;
-	virtual void uninit_graphics() {};
-
-	virtual int repaint_all()=0; 
-
-	virtual void read_terminal_size();
-
-	virtual void app_handler_exit();
-	virtual void app_handler_window_size_changed();
 
 	static void handler_exit(int i);
 	static void handler_window_size_changed(int i);

@@ -76,8 +76,8 @@ void MoreLess_App::uninit_graphics()
         file = nullptr;
     }
 
-    // Remove status bar if it was drawn
-    if (on_alt_screen || !end_reached)  {
+    // Remove status bar if it was drawn (not necessary for alt screen)
+    if (!on_alt_screen)  {
         tc_remove_lines(1);
         if (this->column != 1) {
             tc_cursor_move_row(-1);
@@ -85,72 +85,67 @@ void MoreLess_App::uninit_graphics()
         }
     }
 
+    tc_erase_after_cursor(true);
     tc_cursor_reset_invisible();
 }
 
 void MoreLess_App::draw_status_bar()
 {
-    if (this->column != 1)
+    static const char* LineEnd_Str[4] = {"No LF", "LF", "CRLF", "CRLF & LF"};
+
+    // If in middle of line: Go to begin of next line
+    if (this->column != 1) 
         putchar(LF);
 
     tc_mode_set(Mode::BOLD); 
     tc_mode_set(Mode::INVERSE); 
 
-    int len1 = printf("More (%lu%%)", 100 * bottom_byte / file_size);
+    int len1;
+//    if (on_alt_screen)
+//        len1 = printf("More (%lu %% - %lu%%)", 100 * top_byte / file_size, 100 * bottom_byte / file_size);
+//    else
+        len1 = printf("More (%lu%%)", 100 * bottom_byte / file_size);
     char str[30];
-    int len2 = snprintf(str, 30, "%.1f / %.1f KB   %s ", (float)bottom_byte / 1e3f, (float)file_size / 1e3f, line_ending);
+    int len2 = snprintf(str, 30, "%.1f / %.1f KB   %s ", (float)bottom_byte / 1e3f, (float)file_size / 1e3f, 
+        LineEnd_Str[(unsigned)line_ending]);
     assert(len1 >= 0 && len2 >= 0);
 
-    tc_print_repeated(' ', (uint32_t)std::max(0, terminal_columns - len1 - len2 - 1));
+    tc_print_repeated(' ', (uint32_t)std::max(0, terminal_columns - len1 - len2));
 
     fwrite(str, (unsigned)len2, 1, stdout);
     tc_mode_reset();
 }
 
+void MoreLess_App::app_handler_window_size_changed()
+{
+    if (on_alt_screen)
+    {
+        this->read_terminal_size();
+        this->repaint_all();
+    } else {
+        uint16_t prev_columns = terminal_columns;
+        this->read_terminal_size();
+        if (prev_columns > terminal_columns)  // Handle shrinking:
+        {
+            tc_cursor_move_row(-1);
+            tc_remove_lines(2);
+        } 
+//            tc_cursor_set_pos(terminal_rows, 1);
+        if (prev_columns != terminal_columns) {
+            tc_cursor_set_column(1);
+            this->draw_status_bar();
+        }
+    }
+}
+
 int MoreLess_App::repaint_all() 
 {
-    // TODO handle resizing of terminal 
-    fseek(file, (int64_t)top_byte, 0); // TODO need to update top_byte when drawing new lines
+    fseek(file, (int64_t)top_byte, 0);
 
-    bottom_byte = 0;
+    bottom_byte = top_byte;
+    this->bytes_per_line.clear();
 
-    int prev_c = EOF;
-    uint16_t row = 1;
-    this->column = 1;
-
-    while(row <= (uint64_t)(terminal_rows - 1))
-    {
-        int c = getc(file);
-        if (c == EOF) {
-            this->end_reached = true;
-            break;
-        }
-        bottom_byte++;
-
-        if (++this->column > terminal_columns || c == '\n') {
-            putchar('\n');
-            this->column = 1;
-            row++;
-        } else {
-            putchar(c);
-        }
-
-
-        if (c == '\n' && prev_c == '\r')
-            CRLF_lines++;
-    }
-
-    // Determine line ending: Which option happens more often?
-    if (CRLF_lines >= (uint32_t)row / 2u) 
-        this->line_ending = "CRLF"; // TODO only do this for first print, not the ones following
-    else
-        this->line_ending = "LF";
-
-    if (this->end_reached & !this->on_alt_screen)
-        this->mark_for_exit();
-    else
-        draw_status_bar();
-
+    this->output_next_lines((uint16_t)(terminal_rows - 1u));
 
 /*
     printf("\r\n\n");
