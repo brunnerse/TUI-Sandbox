@@ -31,7 +31,7 @@ int MoreLess_App::init_graphics()
 {
     assert(this->terminal_initialized);
 
-    file = fopen(filename, "r");
+    file = fopen(filename, "rb");
     if (file == nullptr)
     {
         fprintf(stderr, "Could not open file '%s'\n", filename);
@@ -55,14 +55,12 @@ int MoreLess_App::init_graphics()
     std::filesystem::path file_path = filename; 
     this->file_size = std::filesystem::file_size(file_path);
 
-    this->CRLF_lines = 0;
     this->bottom_byte = 0;
     this->top_byte = 0;
-    this->end_reached = false;
 
     this->column = 1;
 
-    tc_cursor_set_invisible();
+    //tc_cursor_set_invisible();
 
     repaint_all();
     
@@ -120,8 +118,19 @@ void MoreLess_App::app_handler_window_size_changed()
 {
     if (on_alt_screen)
     {
+        uint16_t prev_rows = terminal_rows;
         this->read_terminal_size();
+        // If file has less lines than terminal:  Erase all before for simplicity
+        if (this->bytes_per_line.size() < terminal_rows)
+            tc_erase_all();
         this->repaint_all();
+        if (terminal_rows > prev_rows && top_byte > 0) // If size increased: print line
+        {
+            for (int row = prev_rows; row < terminal_rows; row++) {
+                tc_cursor_set_pos(0,0);
+                output_prev_line(false);
+            }
+        }
     } else {
         uint16_t prev_columns = terminal_columns;
         this->read_terminal_size();
@@ -146,18 +155,6 @@ int MoreLess_App::repaint_all()
     this->bytes_per_line.clear();
 
     this->output_next_lines((uint16_t)(terminal_rows - 1u));
-
-/*
-    printf("\r\n\n");
-
-//    tc_write_acs(ACS_LARROW ACS_DARROW ACS_RARROW ACS_UARROW"\n\n\r");
-    tc_write_acs(ACS_BOARD " " ACS_BLOCK " " ACS_DIAMOND " " ACS_CKBOARD "\r\n");
-    tc_write_acs(ACS_ULCORNER ACS_HLINE ACS_HLINE ACS_TTEE ACS_HLINE ACS_URCORNER "\r\n"); 
-    tc_write_acs(ACS_LTEE ACS_HLINE ACS_HLINE ACS_PLUS ACS_HLINE ACS_RTEE "\r\n"); 
-    tc_write_acs(ACS_VLINE "  " ACS_VLINE " " ACS_VLINE "\r\n"); 
-    tc_write_acs(ACS_LLCORNER ACS_HLINE ACS_HLINE ACS_BTEE ACS_HLINE ACS_LRCORNER "\r\n\n"); 
-    tc_write_acs(ACS_S1 ACS_S3 ACS_S7 ACS_S9 "r\n\n"); 
-*/
 
     return 0;
 }
@@ -188,20 +185,17 @@ int MoreLess_App::run()
                 c = LF;
         }
 
-        if (c == LF || c == ' ') { 
-            print_next_line();
-
-            if (this->end_reached && !this->on_alt_screen)
-                this->mark_for_exit();
-            else
-                draw_status_bar();
-        } else if (c == DEL) {
-            if (on_alt_screen) {
-                // TODO scroll back in file too somehow, print previous line of file  
-                // if not at beginning of file:
-                tc_scroll_viewport(1, 1, terminal_rows - 1, terminal_rows);
-            }
-        } else if (c == 'q' || c == ESC) {
+        if (c == LF || c == ' ') 
+        { 
+            output_next_lines(1);
+        } 
+        else if (c == DEL) 
+        {
+            if (on_alt_screen)
+                output_prev_line();
+        }
+        else if (c == 'q' || c == ESC) 
+        {
             this->mark_for_exit();
         }
     }
@@ -209,28 +203,132 @@ int MoreLess_App::run()
     return 0;
 }
 
-void MoreLess_App::print_next_line()
+// TODO Handle tabs and non-ascii chars
+
+void MoreLess_App::output_prev_line(bool scroll_before)
 {
-    tc_cursor_set_row(terminal_rows);
+    // First: read previous terminal_columns bytes
+    long pos = std::max(0l, (long)(top_byte - terminal_columns));
+    uint16_t n_bytes = (uint16_t)(top_byte - (ulong)pos);
+    std::unique_ptr<char> buf = std::make_unique<char>(n_bytes);
+
+    fseek(file, pos, SEEK_SET);
+    fread(buf.get(), n_bytes, 1, file);
+
+    // Go reverse in buffer until we get newline; if last char in buffer is newline, skip that
+    uint16_t start_line_pos = 0;
+    for (long i = n_bytes - 2; i >= 0; i--) {
+        if (buf.get()[i] == '\n') {
+            start_line_pos = (uint16_t)(i + 1);
+            break;
+        }
+    } 
+
+    uint16_t bytes_to_output = n_bytes - start_line_pos;
+
+    if (bytes_to_output > 0) 
+    {
+        if (scroll_before)
+            tc_scroll_viewport(1, 1, terminal_rows - 1, terminal_rows);
+        fwrite(buf.get() + start_line_pos, bytes_to_output, 1, stdout);
+
+        uint16_t prev_end_line_bytes = this->bytes_per_line.back();
+        this->bytes_per_line.pop_back();
+        this->bytes_per_line.push_front(bytes_to_output);
+
+        bottom_byte -= prev_end_line_bytes;
+        top_byte -= bytes_to_output;
+    }
+
+    tc_cursor_set_pos(terminal_rows, 1);
+    this->draw_status_bar();
+}
+
+void MoreLess_App::output_next_lines(uint16_t num_lines)
+{
     tc_insert_empty_lines(1);
+    fseek(file, (long)bottom_byte, SEEK_SET);
 
     this->column = 1;
 
-    int c = getc(file);
+    int prev_c, c = '\n';
 
-    while (c != EOF) 
+    for(uint16_t line = 0; line < num_lines; line++)
     {
-        bottom_byte++;
+        uint16_t bytes_in_line = 0;
 
-        if (++this->column > terminal_columns || c == '\n') {
-            putchar('\n');
-            this->column = 1;
-            break;
-        } else {
-            putchar(c);
+        while (true) 
+        {
+            prev_c = c;
+            c = getc(file);
+
+            if (c == EOF)
+                break;
+
+            bytes_in_line++;
+
+            if (++this->column > terminal_columns || c == LF) 
+            {
+                if (c == LF) {
+                    determine_CRLF((char)prev_c, (char)c);
+                    tc_erase_after_cursor(true); // Erase rest of line
+                }
+
+                putchar(LF);
+                this->column = 1;
+                break;
+            } else {
+                //if (c == HT)
+                //    printf("%*s", 4, ""); 
+                // TODO Handle escaped signs differently
+                putchar(c);
+            }
+
+        }  
+
+        // If printed something: Increase top_byte and bottom_byte, update bytes_per_line
+        if (bytes_in_line > 0) {
+            this->bottom_byte += bytes_in_line;
+            this->bytes_per_line.push_back(bytes_in_line);
+            // If erased first line: Adapt top_byte and bytes_per_line
+            if (bytes_per_line.size() > terminal_rows - 1u) {
+                uint16_t prev_first_line_bytes = this->bytes_per_line.front();
+                this->bytes_per_line.pop_front();
+                top_byte += prev_first_line_bytes;
+            }
+
         }
 
-        c = getc(file);
-    } 
-    this->end_reached = (c == EOF);
+        if (c == EOF) {
+            tc_erase_after_cursor(true); // Erase rest of line
+            // Reached end of file
+            if (this->on_alt_screen) {
+                // TODO more sophisticated; what if message exceeds last line??
+                if (prev_c != '\n') {
+                    tc_mode_set(Mode::DIM);
+                    printf(" -- No LF at end of file");
+                    tc_mode_reset();
+                }
+            }
+            else  {
+                this->mark_for_exit();
+            }
+
+            break;
+        }
+    }
+
+    this->draw_status_bar();
+}
+
+void MoreLess_App::determine_CRLF(char prev_lf, char lf) 
+{
+    if (lf != '\n')
+        return;
+    LineEnd ending = (prev_lf == '\r') ? LineEnd::CRLF : LineEnd::LF_ONLY;
+
+    if (this->line_ending == LineEnd::NO_LF)
+        this->line_ending = ending;
+    else if (this->line_ending != ending)
+        this->line_ending = LineEnd::BOTH;
 }

@@ -29,21 +29,25 @@ private:
     FILE* file;  
 
     uint64_t file_size;
-    uint64_t top_byte;
-    uint64_t bottom_byte;
+    uint64_t top_byte; // The first byte visible in the top line
+    uint64_t bottom_byte; // The byte <after> the last byte in the bottom byte
+
+    std::deque<uint16_t> bytes_per_line;
     
     uint16_t column;
 
-    bool end_reached;
+    enum class LineEnd {NO_LF=0, LF_ONLY, CRLF, BOTH};
 
-    uint32_t CRLF_lines;
-
-    const char *line_ending = "LF";
+    LineEnd line_ending;
 
     void uninit_graphics();
 
     void draw_status_bar();
-    void print_next_line();
+    void output_next_lines(uint16_t num_lines);
+    void output_prev_line(bool scroll_before = true);
 
+    void determine_CRLF(char prev_lf, char lf);
+
+	virtual void app_handler_window_size_changed();
 };
 

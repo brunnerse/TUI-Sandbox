@@ -32,16 +32,20 @@ int main(int argc, char *argv[])
     for (int arg_idx = 1; arg_idx < argc; arg_idx++) 
     {
         if (argv[arg_idx][0] == '-') { //flag
-            switch (argv[arg_idx][1]) {
-            case 'a':
-                use_alt_screen = true;
-                break;
-            case 'i':
-                check_if_output_not_tty = false;
-                break;
-            default:
-                exit_with_usage(argv); 
-            }
+            int flag_idx = 1;
+            do {
+                switch (argv[arg_idx][flag_idx]) {
+                case 'a':
+                    use_alt_screen = true;
+                    break;
+                case 'i':
+                    check_if_output_not_tty = false;
+                    break;
+                default:
+                    exit_with_usage(argv); 
+                }
+                flag_idx++;
+            } while (argv[arg_idx][flag_idx] != '\0');
         }
         else 
         {

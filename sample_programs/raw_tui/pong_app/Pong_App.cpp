@@ -73,6 +73,18 @@ int Basic_App::init_graphics() {
    this->comp_text->set_cfg(Mode::BLINKING, Color::GREEN, true, Color::BLACK, false);
 
 
+
+    printf("\r\n\n");
+
+//    tc_write_acs(ACS_LARROW ACS_DARROW ACS_RARROW ACS_UARROW"\n\n\r");
+    tc_write_acs(ACS_BOARD " " ACS_BLOCK " " ACS_DIAMOND " " ACS_CKBOARD "\r\n");
+    tc_write_acs(ACS_ULCORNER ACS_HLINE ACS_HLINE ACS_TTEE ACS_HLINE ACS_URCORNER "\r\n"); 
+    tc_write_acs(ACS_LTEE ACS_HLINE ACS_HLINE ACS_PLUS ACS_HLINE ACS_RTEE "\r\n"); 
+    tc_write_acs(ACS_VLINE "  " ACS_VLINE " " ACS_VLINE "\r\n"); 
+    tc_write_acs(ACS_LLCORNER ACS_HLINE ACS_HLINE ACS_BTEE ACS_HLINE ACS_LRCORNER "\r\n\n"); 
+    tc_write_acs(ACS_S1 ACS_S3 ACS_S7 ACS_S9 "r\n\n"); 
+
+
     this->repaint_all();
 
     tc_mode_reset();
