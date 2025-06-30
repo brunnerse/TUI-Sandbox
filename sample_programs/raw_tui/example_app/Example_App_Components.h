@@ -243,7 +243,7 @@ template <unsigned NUM_OPT=2>
 class Exit_Component : public TUI_Component {
 
 private:
-    int selected_option = -1;
+    unsigned selected_option = NUM_OPT+1; // Select invalid option initially
 
     char options[NUM_OPT][EXIT_OPTION_MAX_LEN];
 
@@ -255,8 +255,12 @@ public:
         }
     }
 
-    int get_option() {
+    unsigned get_selected_option() {
         return selected_option;
+    }
+
+    unsigned get_num_options() const {
+        return NUM_OPT; 
     }
 
     void set_option_text(unsigned option, const char* text) {
@@ -264,8 +268,8 @@ public:
         strncpy(options[option], text, EXIT_OPTION_MAX_LEN);
     }
 
-    void set_option(int opt) {
-        assert(0 <= opt && opt < (int)NUM_OPT);
+    void select_option(unsigned opt) {
+        assert(opt < (int)NUM_OPT);
         selected_option = opt;
         repaint_options();
     }
@@ -316,7 +320,7 @@ public:
         unsigned width_per_option = width / NUM_OPT;
 
         for (unsigned i = 0; i < NUM_OPT; i++) {
-            if ((int)i == selected_option) {
+            if (i == selected_option) {
                 tc_mode_set(Mode::BOLD, Color::BLACK, false, Color::WHITE, true); 
             } else {
                 tc_mode_set(Mode::BOLD, Color::WHITE, true, Color::BLACK, false); 

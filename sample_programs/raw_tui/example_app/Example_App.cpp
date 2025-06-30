@@ -19,7 +19,6 @@
 #include "ANSI_Escape_Codes.h"
 
 
-#define NUM_EXIT_OPTIONS 2
 
 
 static uint16_t char_row = 0;
@@ -72,7 +71,7 @@ int Example_App::init_graphics() {
     this->comp_cmdline = std::make_unique<CommandLine_Component>();
     this->comp_text = std::make_unique<TextBox_Component>("Example App");
 
-    this->comp_exit = std::make_unique<Exit_Component<NUM_EXIT_OPTIONS>>();
+    this->comp_exit = std::make_unique<Exit_Component<2>>();
     comp_exit->set_option_text(0, "Yes");
     comp_exit->set_option_text(1, "No");
 
@@ -165,14 +164,14 @@ int Example_App::run() {
                     if (escape_expression.compare(CODE_ESC) == 0) {
                         this->quit_exit_screen();
                     } else if (escape_expression.compare(CODE_ESC"[D") == 0) {
-                        comp_exit->set_option(std::max(comp_exit->get_option() - 1, 0));
+                        comp_exit->select_option(std::max(comp_exit->get_selected_option() - 1u, 0u));
                     } else if (escape_expression.compare(CODE_ESC"[C") == 0) {
-                        comp_exit->set_option(std::min(comp_exit->get_option() + 1, NUM_EXIT_OPTIONS-1));
+                        comp_exit->select_option(std::min(comp_exit->get_selected_option() + 1u, comp_exit->get_num_options() - 1u));
                     }
                 } else {
                     if (c == ' ' || c == CODE_LF[0])
                     {
-                        if (comp_exit->get_option() == 0)
+                        if (comp_exit->get_selected_option() == 0)
                             this->mark_for_exit();
 
                         this->quit_exit_screen();
@@ -240,7 +239,7 @@ void Example_App::enter_exit_screen()
 //    tc_save_screen();
     tc_cursor_set_invisible();
 
-    comp_exit->set_option(1);
+    comp_exit->select_option(1);
     this->repaint_all();
 }
 

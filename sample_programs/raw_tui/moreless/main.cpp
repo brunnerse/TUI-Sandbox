@@ -23,8 +23,6 @@ int main(int argc, char *argv[])
     if (argc < 2)
         exit_with_usage(argv);
 
-    // TODO behave like cat if not a argv flag given
-
     const char *file = nullptr; 
     bool use_alt_screen = false;
     bool check_if_output_not_tty = true;
