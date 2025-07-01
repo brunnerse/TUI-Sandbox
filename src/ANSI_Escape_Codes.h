@@ -38,6 +38,11 @@
 #define ESC_CURSOR_MOVE_RIGHT           CODE_ESC"[%uC"
 #define ESC_CURSOR_MOVE_LEFT            CODE_ESC"[%uD"
 
+#define ESC_ARROW_LEFT                  CODE_ESC"[D"
+#define ESC_ARROW_RIGHT                 CODE_ESC"[C"
+#define ESC_ARROW_UP                    CODE_ESC"[A"
+#define ESC_ARROW_DOWN                  CODE_ESC"[B"
+
 #define ESC_CURSOR_MOVE_DOWN_TO_LINE_BEGIN  CODE_ESC"[%uE"
 #define ESC_CURSOR_MOVE_UP_TO_LINE_BEGIN    CODE_ESC"[%uF"
 
@@ -61,6 +66,7 @@
 #define ESC_REMOVE_LINES 						CODE_ESC"[%uM"
 
 #define ESC_SET_VIEWPORT_TOP_BOTTOM_MARGIN 		CODE_ESC"[%u;%ur"
+
 
 
 
@@ -129,6 +135,9 @@ const std::map<Color, const char*> Color_Str {
 #define ESC_MODE                CODE_ESC"[%um"
 #define ESC_MODE_COLOR          CODE_ESC"[%u;%um"
 #define ESC_MODE_COLOR_FG_BG    CODE_ESC"[%u;%u;%um"
+
+#define ESC_COLOR_256_GRAYSCALE_OFFSET 232
+#define ESC_COLOR_256_RGB_OFFSET 16
 
 #define ESC_COLOR_FG_256        CODE_ESC"[38;5;%um" // %u being the color ID
 #define ESC_COLOR_BG_256        CODE_ESC"[48;5;%um" // %u being the color ID

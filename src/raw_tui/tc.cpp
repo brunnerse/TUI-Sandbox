@@ -15,7 +15,7 @@
 
 static cursor_pos_t cursor_pos = {0, 0};  
 
-void tc_print_repeated(char c, uint32_t num_repeats)
+void tc_print_repeated(char c, uint16_t num_repeats)
 {
     assert(num_repeats > 0);
     printf("%c" ESC_REPEAT_LAST_CHAR, c, num_repeats-1);
@@ -58,6 +58,14 @@ void tc_mode_set(Mode mode, Color fg_color, bool fg_bright, Color bg_color, bool
         + (unsigned)bg_color);
 }
 
+void tc_color_set(Color fg_color, bool fg_bright, Color bg_color, bool bg_bright) {
+    printf(ESC_MODE_COLOR, 
+        (fg_bright ? ESC_MODE_COLOR_FG_BRIGHT_OFFSET : ESC_MODE_COLOR_FG_OFFSET)
+        + (unsigned)fg_color,
+        (bg_bright ? ESC_MODE_COLOR_BG_BRIGHT_OFFSET : ESC_MODE_COLOR_BG_OFFSET)
+        + (unsigned)bg_color);
+
+}
 
 void tc_color_set(Color color, bool bright) {
     printf(ESC_MODE, 
@@ -85,6 +93,23 @@ void tc_color_set_rgb(uint8_t r, uint8_t g, uint8_t b, bool bg) {
     );
 }
 
+
+void tc_color_set_grayscale(uint8_t dark_to_light, bool bg)
+{
+    assert(dark_to_light <= TC_COLOR_GRAYCALE_MAX);
+    printf((bg ? ESC_COLOR_BG_256 : ESC_COLOR_FG_256),
+        ESC_COLOR_256_GRAYSCALE_OFFSET + dark_to_light 
+    );
+}
+
+void tc_color_set_rgb_6(uint8_t r, uint8_t g, uint8_t b, bool bg)
+{
+    assert(r < 6 && g < 6 && b < 6);
+    printf((bg ? ESC_COLOR_BG_256 : ESC_COLOR_FG_256),
+        ESC_COLOR_256_RGB_OFFSET + 36 * r + 6 * g + b
+    );
+
+}
 
 
 cursor_pos_t tc_cursor_get_last_set_pos() {
@@ -294,4 +319,17 @@ void tc_write_acs(char acs_c)
 void tc_write_acs(const char *acs_string)
 {
     printf(ESC_CHARSET_SWITCH_TO_ACS "%s" ESC_CHARSET_SWITCH_TO_ASCII, acs_string);
+}
+
+void tc_write_acs_repeated(char acs_c, uint16_t num_repeats)
+{
+    assert(num_repeats > 0);
+    printf(ESC_CHARSET_SWITCH_TO_ACS "%c" ESC_REPEAT_LAST_CHAR ESC_CHARSET_SWITCH_TO_ASCII,
+        acs_c, num_repeats-1);
+}
+
+void tc_write_acs_repeated(const char *acs_c, uint16_t num_repeats)
+{
+    assert(acs_c[1] == '\0'); // String of length 1
+    tc_write_acs_repeated(acs_c[0], num_repeats);
 }

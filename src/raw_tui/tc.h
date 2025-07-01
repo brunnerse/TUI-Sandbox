@@ -12,7 +12,7 @@ struct cursor_pos_t {
 };
 
 
-void tc_print_repeated(char c, uint32_t num_repeats);
+void tc_print_repeated(char c, uint16_t num_repeats);
 
 void tc_mode_set(Mode mode);
 void tc_mode_reset(Mode mode);
@@ -23,12 +23,18 @@ void tc_mode_set(Mode mode, Color fg_color, Color bg_color);
 void tc_mode_set(Mode mode, Color fg_color, bool fg_bright, Color bg_color, bool bg_bright=false);
 
 
+void tc_color_set(Color fg_color, bool fg_bright, Color bg_color, bool bg_bright=false);
 void tc_color_set(Color color, bool bright=false);
 void tc_color_set_bg(Color color, bool bright=false);
 void tc_color_reset(bool fg=true, bool bg=false);
 
-void tc_color_set_265(uint8_t r, uint8_t g, uint8_t b, bool bg=true); // Not implemented
-void tc_color_set_rgb(uint8_t r, uint8_t g, uint8_t b, bool bg=true);
+
+#define TC_COLOR_GRAYCALE_MIN 0
+#define TC_COLOR_GRAYCALE_MAX 23
+void tc_color_set_grayscale(uint8_t dark_to_light, bool bg=false); 
+
+void tc_color_set_rgb_6(uint8_t r, uint8_t g, uint8_t b, bool bg=false);
+void tc_color_set_rgb(uint8_t r, uint8_t g, uint8_t b, bool bg=false);
 
 
 
@@ -78,3 +84,6 @@ bool tc_test_terminal_size(uint16_t *rows, uint16_t *cols);
 
 void tc_write_acs(char acs_c);
 void tc_write_acs(const char *acs_string);
+
+void tc_write_acs_repeated(char acs_c, uint16_t num_repeats);
+void tc_write_acs_repeated(const char *acs_c, uint16_t num_repeats);
