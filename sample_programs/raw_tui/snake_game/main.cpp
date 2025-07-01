@@ -9,7 +9,8 @@ void exit_with_usage(char *argv[])
 {
     printf(
         "Usage: %s" 
-        "\t[-a] use alternate display mode\n",
+        "\t[-a] use alternate display mode\n"
+        "\t[-b] use borders\n",
         argv[0]
     );
     exit(0);
@@ -20,6 +21,7 @@ void exit_with_usage(char *argv[])
 int main(int argc, char *argv[])
 {
     bool use_alt_screen = false;
+    bool use_borders = false;
 
     for (int arg_idx = 1; arg_idx < argc; arg_idx++) 
     {
@@ -29,6 +31,9 @@ int main(int argc, char *argv[])
                 switch (argv[arg_idx][flag_idx]) {
                 case 'a':
                     use_alt_screen = true;
+                    break;
+                case 'b':
+                    use_borders = true;
                     break;
                 default:
                     exit_with_usage(argv); 
@@ -42,7 +47,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    Snake app(use_alt_screen);
+    Snake app(use_alt_screen, use_borders);
 
     int ret = app.start();
 

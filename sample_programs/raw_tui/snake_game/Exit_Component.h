@@ -17,13 +17,16 @@ private:
 
     char options[NUM_OPT][EXIT_OPTION_MAX_LEN];
 
+    const char *text;
 
 public:
-    Exit_Component() {
+    Exit_Component(const char *text) : text(text) {
         for (unsigned i = 0; i < NUM_OPT; i++) {
             snprintf(options[i], EXIT_OPTION_MAX_LEN, "%u", i);
         }
     }
+
+    Exit_Component() : Exit_Component("Exit App?") {}
 
     unsigned get_selected_option() {
         return selected_option;
@@ -66,7 +69,7 @@ public:
             } else
             {
                 if ((row - bounds.row) == (bounds.height-1)/2) {
-                    printf_aligned(bounds.width-2, Align::CENTER, "%s", "Exit App?");
+                    printf_aligned(bounds.width-2, Align::CENTER, "%s", text);
                 } else {
                     tc_print_repeated(' ', bounds.width-2);
                 }

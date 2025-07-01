@@ -108,7 +108,7 @@ void MoreLess_App::draw_status_bar()
         LineEnd_Str[(unsigned)line_ending]);
     assert(len1 >= 0 && len2 >= 0);
 
-    tc_print_repeated(' ', (uint32_t)std::max(0, terminal_columns - len1 - len2));
+    tc_print_repeated(' ', (uint16_t)std::max(0, terminal_columns - len1 - len2));
 
     fwrite(str, (unsigned)len2, 1, stdout);
     tc_mode_reset();
